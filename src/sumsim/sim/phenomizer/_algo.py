@@ -1,6 +1,5 @@
 import abc
 import typing
-import warnings
 
 import numpy as np
 import hpotk

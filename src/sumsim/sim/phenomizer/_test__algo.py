@@ -1,13 +1,15 @@
+import typing
 import unittest
 
-from c2s2.model import Sample, PhenotypicFeature
+import hpotk
+
+from sumsim.model import Sample
 
 from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimilarityMeasure
 
 
-def map_to_phenotypic_features(term_ids):
-    return tuple(PhenotypicFeature.from_values(identifier=term_id, is_present=True)
-                 for term_id in term_ids)
+def map_to_phenotypic_features(term_ids) -> typing.Iterable[hpotk.TermId]:
+    return (hpotk.TermId.from_curie(curie) for curie in term_ids)
 
 
 class PhenomizerTest(unittest.TestCase):
@@ -17,18 +19,19 @@ class PhenomizerTest(unittest.TestCase):
         self.phenomizer = PhenomizerSimilarityKernel(PrecomputedIcMicaSimilarityMeasure(mica_dict))
 
     def test_normal_input(self):
-        # arachnodactyly and portal hypertension
-        patient_a = Sample.from_values(label='A', phenotypic_features=map_to_phenotypic_features(["HP:0001166", "HP:0001409"]))
-        # arachnodactyly, hypertension, and intellectual disability
-        patient_b = Sample.from_values(label='B', phenotypic_features=map_to_phenotypic_features(["HP:0001166", "HP:0000822", "HP:0001249"]))
+        patient_a = Sample(label='A',
+                           # arachnodactyly and portal hypertension
+                           phenotypic_features=map_to_phenotypic_features(("HP:0001166", "HP:0001409")))
+
+        patient_b = Sample(label='B',
+                           # arachnodactyly, hypertension, and intellectual disability
+                           phenotypic_features=map_to_phenotypic_features(("HP:0001166", "HP:0000822", "HP:0001249")))
         similarity = self.phenomizer.compute(patient_a, patient_b)
         self.assertAlmostEqual(similarity.similarity, 5.416666666, delta=1E-9)
 
     def test_empty_returns_zero(self):
-        # arachnodactyly and portal hypertension
-        patient_a = Sample.from_values(label='A', phenotypic_features=map_to_phenotypic_features([]))
-        # arachnodactyly, hypertension, and intellectual disability
-        patient_b = Sample.from_values(label='B', phenotypic_features=map_to_phenotypic_features([]))
+        patient_a = Sample(label='A', phenotypic_features=map_to_phenotypic_features([]))
+        patient_b = Sample(label='B', phenotypic_features=map_to_phenotypic_features([]))
         similarity = self.phenomizer.compute(patient_a, patient_b)
         self.assertAlmostEqual(similarity.similarity, 0., delta=1E-9)
 

@@ -96,7 +96,7 @@ class TermPair:
         return 'HP:' + str(term_id).rjust(7, '0')
 
 
-def read_ic_mica_data(fpath: str, timeout: float) -> typing.Mapping[TermPair, float]:
+def read_ic_mica_data(fpath: str, timeout: float = 30.) -> typing.Mapping[TermPair, float]:
     """
     Read a CSV table with information contents of most informative common ancestors from given `fpath`.
 

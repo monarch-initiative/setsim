@@ -82,21 +82,22 @@ class Sample(Phenotyped, Labeled):
         self._di = disease_identifier
 
     @property
+    def label(self) -> str:
+        return self._label
+
+    @property
+    def phenotypic_features(self) -> typing.Sequence[hpotk.TermId]:
+        return self._pfs
+
+    @property
     def disease_identifier(self) -> typing.Optional[DiseaseIdentifier]:
         return self._di
-
-
-    @abc.abstractmethod
-    def __copy__(self):
-        """
-        Sample must support (shallow) copy to support modification in the perturb step.
-        """
-        pass
 
     def __eq__(self, other):
         return isinstance(other, Sample) \
             and self.label == other.label \
-            and self.phenotypic_features == other.phenotypic_features
+            and self.phenotypic_features == other.phenotypic_features \
+            and self.disease_identifier == other.disease_identifier
 
     def __str__(self):
         return (f'Sample(label="{self.label}", '
@@ -104,7 +105,7 @@ class Sample(Phenotyped, Labeled):
                 f'disease_identifier={self.disease_identifier})')
 
     def __repr__(self):
-        return (f'SimpleSample(label="{self.label}", '
+        return (f'Sample(label="{self.label}", '
                 f'phenotypic_features={self.phenotypic_features}, '
                 f'disease_identifier={self.disease_identifier})')
 
