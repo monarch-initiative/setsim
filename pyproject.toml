@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=65.6.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sumsim"
+description = "A proof of concept of the summing similarity measure"
+authors = [
+    { name = "Ben Coleman", email = "ben.coleman@jax.org" },
+    { name = "Daniel Danis", email = "daniel.gordon.danis@protonmail.com" },
+    { name = "Peter Robinson", email = "peter.robinson@jax.org" },
+]
+
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["human phenotype ontology", "HPO", "library"]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version"]
+
+dependencies = [
+    "hpo-toolkit >= 0.3.0"
+]
+[project.optional-dependencies]
+dev = [
+]
+
+[project.urls]
+"Repository" = "https://github.com/monarch-initiative/sumsim"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+zip-safe = false
+
+[tool.setuptools.dynamic]
+version = { attr = "sumsim.__version__" }
