@@ -1,5 +1,4 @@
 import abc
-import copy
 import typing
 
 import hpotk
@@ -36,21 +35,56 @@ class Labeled(metaclass=abc.ABCMeta):
         pass
 
 
-class Sample(Phenotyped, Labeled, metaclass=abc.ABCMeta):
+class DiseaseIdentifier(hpotk.model.Identified, hpotk.model.Named):
+    """
+    Disease credentials consisting of an identifier and a name.
+    """
+
+    def __init__(self, disease_id: hpotk.model.TermId,
+                 name: str):
+        self._disease_id = hpotk.util.validate_instance(disease_id, hpotk.TermId, 'disease_id')
+        self._name = hpotk.util.validate_instance(name, str, 'name')
+
+    @property
+    def identifier(self) -> hpotk.model.TermId:
+        return self._disease_id
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __eq__(self, other):
+        return isinstance(other, DiseaseIdentifier) \
+            and self.identifier == other.identifier \
+            and self.name == other.name
+
+    def __hash__(self):
+        return hash((self.identifier, self.name))
+
+    def __str__(self):
+        return f"DiseaseIdentifier(identifier={self.identifier}, name={self.name})"
+
+    def __repr__(self):
+        return str(self)
+
+
+
+class Sample(Phenotyped, Labeled):
     """
     `Sample` describes the requirements for the subject data, as far as C2S2 is concerned.
     """
 
-    @staticmethod
-    def from_values(label: str, phenotypic_features: typing.Iterable[hpotk.TermId]):
-        """
-        Create a `Sample` from the `label` and `phenotypic_features`.
+    def __init__(self, label: str,
+                 phenotypic_features: typing.Iterable[hpotk.TermId],
+                 disease_identifier: typing.Optional[DiseaseIdentifier] = None):
+        self._label = label
+        self._pfs = tuple(phenotypic_features)
+        self._di = disease_identifier
 
-        :param label: a label `str`.
-        :param phenotypic_features: an iterable of phenotypic features.
-        :return: the new sample.
-        """
-        return SimpleSample(label, phenotypic_features)
+    @property
+    def disease_identifier(self) -> typing.Optional[DiseaseIdentifier]:
+        return self._di
+
 
     @abc.abstractmethod
     def __copy__(self):
@@ -65,43 +99,14 @@ class Sample(Phenotyped, Labeled, metaclass=abc.ABCMeta):
             and self.phenotypic_features == other.phenotypic_features
 
     def __str__(self):
-        return f'Sample(label="{self.label}", n_features={len(self.phenotypic_features)})'
+        return (f'Sample(label="{self.label}", '
+                f'n_features={len(self.phenotypic_features)}, '
+                f'disease_identifier={self.disease_identifier})')
 
-
-class BaseSample(Sample, metaclass=abc.ABCMeta):
-    """
-    The bare-bones `Sample` implementation.
-    """
-
-    def __init__(self, label: str,
-                 phenotypic_features: typing.Iterable[hpotk.TermId]):
-        self._label = label
-        self._pfs = tuple(phenotypic_features)
-
-    @property
-    def label(self) -> str:
-        return self._label
-
-    @property
-    def phenotypic_features(self) -> typing.Sequence[hpotk.TermId]:
-        return self._pfs
-
-    @phenotypic_features.setter
-    def phenotypic_features(self, value: typing.Iterable[hpotk.TermId]):
-        self._pfs = tuple(value)
-
-    def __copy__(self):
-        # We pass along the label ref but we carbon copy each phenotypic feature
-        return type(self)(self.label, [copy.copy(feature) for feature in self.phenotypic_features])
-
-
-class SimpleSample(BaseSample):
     def __repr__(self):
-        return f'SimpleSample(label="{self.label}", phenotypic_features={self.phenotypic_features})'
-
-    def __str__(self):
-        return f'SimpleSample(label={self.label}, n_phenotypic_features={len(self.phenotypic_features)})'
-
+        return (f'SimpleSample(label="{self.label}", '
+                f'phenotypic_features={self.phenotypic_features}, '
+                f'disease_identifier={self.disease_identifier})')
 
 class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
 
