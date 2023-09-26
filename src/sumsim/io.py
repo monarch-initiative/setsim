@@ -42,12 +42,10 @@ def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
     identifier = phenopacket.subject.id
     phenotypic_features = []
     for feature in phenopacket.phenotypic_features:
-        term_id = TermId.from_curie(feature.type.id)
-        observed = not feature.excluded
-        pf = SimplePhenotypicFeature(term_id, is_present=observed)
-        phenotypic_features.append(pf)
-
-    return SimpleSample(identifier, phenotypic_features)
+        if not feature.excluded:
+            term_id = TermId.from_curie(feature.type.id)
+            phenotypic_features.append(term_id)
+    return Sample(identifier, phenotypic_features)
 
 def read_cohort(cohort: typing.Union[Cohort, typing.IO, str]) -> typing.Sequence[Sample]:
     """
