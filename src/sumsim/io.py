@@ -47,30 +47,14 @@ def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
             phenotypic_features.append(term_id)
     return Sample(identifier, phenotypic_features)
 
-def read_cohort(cohort: typing.Union[Cohort, typing.IO, str]) -> typing.Sequence[Sample]:
-    """
-    Read Cohort into a `sumsim.model.Sample`.
-
-    :param cohort: a Cohort object, path to a cohort JSON file, or an IO wrapper.
-    :return: a sequence of `sumsim.model.Sample`s corresponding to Cohort members.
-    :raises: IOError in case of IO issues or a ValueError if the input is not a proper `Cohort`.
-    """
-    if not isinstance(cohort, Message):
-        cohort = read_protobuf_message(cohort, Cohort())
-    return _parse_cohort(cohort)
-
-
-def _parse_cohort(cohort: Cohort) -> typing.Sequence[Sample]:
-    """
-    Extract `sumsim.model.Sample`s from a `Cohort` into a sequence of `sumsim.model.Sample`s.
-    Each cohort member is transformed into one `sumsim.model.Sample`.
-
-    :raises: a `ValueError` if the input is not a `Cohort`.
-    """
-    if not isinstance(cohort, Cohort):
-        raise ValueError(f'Expected an argument with type {Cohort} but got {type(cohort)}')
-    return [_parse_phenopacket(member) for member in cohort.members]
-
+def read_folder(fpath_pp: str) -> typing.Sequence[Sample]:
+    samples = []
+    for filename in os.listdir(fpath_pp):
+        if filename.endswith(".json"):
+            file_path = os.path.join(fpath_pp, filename)
+            if os.path.isfile(file_path):
+                samples.append(read_phenopacket(file_path))
+    return samples
 
 def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, encoding: str = 'utf-8') -> MESSAGE:
     """
