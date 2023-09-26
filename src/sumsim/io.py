@@ -7,6 +7,7 @@ from google.protobuf.json_format import Parse
 from google.protobuf.message import Message
 from hpotk.model import TermId
 from phenopackets import Phenopacket, Cohort
+from sumsim.base.model import Sample
 
 
 # A generic type for a Protobuf message
