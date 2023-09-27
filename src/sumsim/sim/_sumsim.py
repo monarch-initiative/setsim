@@ -1,10 +1,7 @@
 import typing
-
 import hpotk
-import hpotk.algorithm
 
 from sumsim.model import Phenotyped
-
 from ._base import SimilarityKernel, SimilarityResult
 
 
@@ -20,6 +17,7 @@ class SumSimSimilarityKernel(SimilarityKernel):
                          self._hpo.get_ancestors(pf, include_source=True))
         b_features = set(ancestor for pf in b.phenotypic_features for ancestor in
                          self._hpo.get_ancestors(pf, include_source=True))
-        ab_features = list(a_features.intersection(b_features))
-        ab_similarity = sum([self._delta_ic[pf] for pf in ab_features])
-        return SimilarityResult(ab_similarity)
+        ics = [self._delta_ic.get(pf.value, None) for pf in a_features.intersection(b_features)]
+        if None in ics:
+            raise KeyError(f'One or more term IDs in "{a_features.intersection(b_features)}" were not found in the IC dictionary')
+        return SimilarityResult(sum(ics))
