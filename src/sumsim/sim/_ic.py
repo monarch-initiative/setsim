@@ -30,11 +30,11 @@ class IcTransformer:
     def _use_mean(self, ic_dict: typing.Mapping[hpotk.TermId, float]) -> typing.Mapping[hpotk.TermId, float]:
         delta_ic_dict = {}
         for TermID in ic_dict:
-            parents = self._hpo.graph.get_parents(TermID)
-            if len(parents) > 0:
-                parent_ic = mean([ic_dict[i.value] for i in parents])
-            else:
+            if TermID == self._hpo.graph.root.value:
                 parent_ic = 0
+            else:
+                parents = self._hpo.graph.get_parents(TermID)
+                parent_ic = mean(ic_dict[i.value] for i in parents)
             delta_ic_dict[TermID] = ic_dict[TermID] - parent_ic
         return delta_ic_dict
 
