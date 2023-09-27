@@ -1,7 +1,7 @@
 import typing
 from statistics import mean
 from sumsim.model._base import Sample
-import multiprocessing as mp
+import multiprocessing
 from math import log
 import numpy as np
 
@@ -57,11 +57,18 @@ class IcCalculator:
         self.used_terms = set()
         self.sample_array = None
 
-    def calculate_ic_from_samples(self, samples: typing.Sequence(Sample), root: str = "HP:0000001") -> typing.Mapping[hpotk.TermId, float]:
+    def calculate_ic_from_samples(self, samples: typing.Sequence[Sample], root: str = "HP:0000001") -> typing.Mapping[hpotk.TermId, float]:
         self.samples = samples
         self.used_terms = set(pf.value for sample in samples for pf in sample.phenotypic_features)
-        self.sample_array = _get_sample_array()
-        list(pool.imap(_get_term_freq, self._hpo.get_descendants(root, include_source=True)))
+        self.sample_array = self._get_sample_array()
+        # Define the number of processes to use
+        num_processes = multiprocessing.cpu_count() - 2  # Use all but 2 available CPU cores
+        # Create a multiprocessing pool
+        pool = multiprocessing.Pool(processes=num_processes)
+        results = list(pool.imap(self._get_term_freq, self._hpo.get_descendants(root, include_source=True)))
+        pool.close()
+        ic_dict = {key: value for key, value in results}
+        return ic_dict
 
     def _get_sample_array(self) -> np.array:
         dtype = [(col, bool) for col in self.used_terms]
@@ -74,9 +81,13 @@ class IcCalculator:
         return array
 
 
-    def _get_term_freq(self, term: hpotk.TermId) -> (str, int):
+    def _get_term_freq(self, term: hpotk.TermId) -> (str, float):
         term_descendants = set(i.value for i in self._hpo.get_descendants(term.value, include_source=True))
         relevant_descendants = list(term_descendants & self.used_terms)
-        freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self.sample_array)
-        return term.value, freq
+        if len(relevant_descendants) > 0:
+            freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self.sample_array)
+        else:
+            freq = 1
+        ic = log(len(self.sample_array)/freq)
+        return (term.value, ic)
 
