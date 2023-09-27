@@ -1,5 +1,9 @@
 import typing
 from statistics import mean
+from sumsim.model._base import Sample
+import multiprocessing as mp
+from math import log
+import numpy as np
 
 import hpotk
 import hpotk.algorithm
@@ -40,3 +44,39 @@ class IcTransformer:
             parent_ic = max([ic_dict[i.value] for i in self._hpo.graph.get_parents(TermID)], default=0)
             delta_ic_dict[TermID] = ic_dict[TermID] - parent_ic
         return delta_ic_dict
+
+
+class IcCalculator:
+    """
+    Create a dictionary providing the information content of terms.
+    """
+
+    def __init__(self, hpo: hpotk.MinimalOntology):
+        self._hpo = hpo.graph
+        self.samples = None
+        self.used_terms = set()
+        self.sample_array = None
+
+    def calculate_ic_from_samples(self, samples: typing.Sequence(Sample), root: str = "HP:0000001") -> typing.Mapping[hpotk.TermId, float]:
+        self.samples = samples
+        self.used_terms = set(pf.value for sample in samples for pf in sample.phenotypic_features)
+        self.sample_array = _get_sample_array()
+        list(pool.imap(_get_term_freq, self._hpo.get_descendants(root, include_source=True)))
+
+    def _get_sample_array(self) -> np.array:
+        dtype = [(col, bool) for col in self.used_terms]
+        array = np.zeros(len(self.samples), dtype=dtype)
+        i = 0
+        for sample in self.samples:
+            for term in sample.phenotypic_features:
+                array[term.value][i] = True
+            i = i + 1
+        return array
+
+
+    def _get_term_freq(self, term: hpotk.TermId) -> (str, int):
+        term_descendants = set(i.value for i in self._hpo.get_descendants(term.value, include_source=True))
+        relevant_descendants = list(term_descendants & self.used_terms)
+        freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self.sample_array)
+        return term.value, freq
+
