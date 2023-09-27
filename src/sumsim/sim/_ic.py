@@ -1,6 +1,6 @@
 import typing
 from statistics import mean
-from sumsim.model._base import Sample
+from sumsim.model import Sample
 import multiprocessing
 from math import log
 import numpy as np
@@ -57,12 +57,12 @@ class IcCalculator:
         self.used_terms = set()
         self.sample_array = None
 
-    def calculate_ic_from_samples(self, samples: typing.Sequence[Sample], root: str = "HP:0000001") -> typing.Mapping[hpotk.TermId, float]:
+    def calculate_ic_from_samples(self, samples: typing.Sequence[Sample], root: str = "HP:0000118") -> typing.Mapping[str, float]:
         self.samples = samples
         self.used_terms = set(pf.value for sample in samples for pf in sample.phenotypic_features)
         self.sample_array = self._get_sample_array()
         # Define the number of processes to use
-        num_processes = multiprocessing.cpu_count() - 2  # Use all but 2 available CPU cores
+        num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
         # Create a multiprocessing pool
         pool = multiprocessing.Pool(processes=num_processes)
         results = list(pool.imap(self._get_term_freq, self._hpo.get_descendants(root, include_source=True)))
