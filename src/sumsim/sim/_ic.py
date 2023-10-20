@@ -1,12 +1,11 @@
-import typing
-from statistics import mean
-from sumsim.model._base import Sample
 import multiprocessing
+import typing
 from math import log
-import numpy as np
+from statistics import mean
 
-import hpotk
 import hpotk.algorithm
+import numpy as np
+from sumsim.model._base import Sample
 
 
 class IcTransformer:
