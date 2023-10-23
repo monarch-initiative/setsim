@@ -1,5 +1,6 @@
 import multiprocessing
 import typing
+import warnings
 from math import log
 from statistics import mean
 
@@ -20,6 +21,12 @@ class IcTransformer:
         self._strategy = strategy
 
     def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float]) -> typing.Mapping[hpotk.TermId, float]:
+        pheno_abn = {i for i in self._hpo.graph.get_descendants(self._root, include_source=True)}
+        dict_keys = set(ic_dict.keys())
+        incompatible_terms = dict_keys.difference(dict_keys & pheno_abn)
+        if incompatible_terms:
+            raise ValueError(f'Original dictionary contains the following terms which are not descendants of the  root '
+                             f'({self._root.value}):\n{incompatible_terms}')
         if self._strategy == 'mean':
             return self._use_mean(ic_dict)
         elif self._strategy == 'max':
@@ -29,20 +36,25 @@ class IcTransformer:
 
     def _use_mean(self, ic_dict: typing.Mapping[hpotk.TermId, float]) -> typing.Mapping[hpotk.TermId, float]:
         delta_ic_dict = {}
-        for term in ic_dict:
-            if term == self._root:
-                parent_ic = 0
-            else:
+        for term, term_ic in ic_dict.items():
+            if term != self._root:
                 parents = self._hpo.graph.get_parents(term)
-                parent_ic = mean(ic_dict[i] for i in parents)
-            delta_ic_dict[term] = ic_dict[term] - parent_ic
+                # Get mean IC of parents of term ignoring those not in the dictionary.
+                parent_ic = mean(ic_dict[i] for i in parents if i in ic_dict)
+            else:
+                parent_ic = 0
+            delta_ic_dict[term] = term_ic - parent_ic
         return delta_ic_dict
 
     def _use_max(self, ic_dict: typing.Mapping[hpotk.TermId, float]) -> typing.Mapping[hpotk.TermId, float]:
         delta_ic_dict = {}
-        for term in ic_dict:
-            parent_ic = max([ic_dict[i] for i in self._hpo.graph.get_parents(term)], default=0)
-            delta_ic_dict[term] = ic_dict[term] - parent_ic
+        for term, term_ic in ic_dict.items():
+            if term != self._root:
+                parents = self._hpo.graph.get_parents(term)
+                parent_ic = max([ic_dict[i] for i in parents], default=0)
+            else:
+                parent_ic = 0
+            delta_ic_dict[term] = term_ic - parent_ic
         return delta_ic_dict
 
 
@@ -56,12 +68,17 @@ class IcCalculator:
         self._root = hpo.get_term(root)
         self.samples = None
         self.used_terms = set()
+        self.used_pheno_abn = set()
         self.sample_array = None
 
     def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[
             hpotk.TermId, float]:
         self.samples = samples
         self.used_terms = set(pf for sample in samples for pf in sample.phenotypic_features)
+        self.used_pheno_abn = self.used_terms & {i for i in self._hpo.get_descendants(self._root, include_source=True)}
+        if len(self.used_terms) != len(self.used_pheno_abn):
+            warnings.warn("Your samples include terms that are not included as a Phenotypic abnormality (HP:0000118) "
+                          "in your ontology! These terms will be ignored.")
         self.sample_array = self._get_sample_array()
         # Define the number of processes to use
         num_processes = multiprocessing.cpu_count() - 2  # Use all but 2 available CPU cores
@@ -74,7 +91,7 @@ class IcCalculator:
 
     def _get_sample_array(self) -> np.array:
         # Convert hpotk.TermID to string for array index
-        array_type = [(col.value, bool) for col in self.used_terms]
+        array_type = [(col.value, bool) for col in self.used_pheno_abn]
         array = np.zeros(len(self.samples), dtype=array_type)
         i = 0
         for sample in self.samples:
@@ -85,7 +102,7 @@ class IcCalculator:
 
     def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
         term_descendants = set(i for i in self._hpo.get_descendants(term, include_source=True))
-        relevant_descendants = [i.value for i in list(term_descendants & self.used_terms)]
+        relevant_descendants = [i.value for i in list(term_descendants & self.used_pheno_abn)]
         if len(relevant_descendants) > 0:
             freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self.sample_array)
         else:
