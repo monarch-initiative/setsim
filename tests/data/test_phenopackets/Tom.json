@@ -1,0 +1,27 @@
+{
+  "id": "Tom",
+  "subject": {
+    "id": "Tom",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0004021",
+        "label": "Lytic defects of radial metaphysis"
+      }
+    },
+    {
+      "type": {
+        "id": "HP:0004026",
+        "label": "Broad radial metaphysis"
+      }
+    },
+    {
+      "type": {
+        "id": "HP:0032648",
+        "label": "Tubularization of Bowman capsule"
+      }
+    }
+  ]
+}

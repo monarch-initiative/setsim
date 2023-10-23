@@ -1,0 +1,15 @@
+{
+  "id": "Bill",
+  "subject": {
+    "id": "Bill",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0004026",
+        "label": "Broad radial metaphysis"
+      }
+    }
+  ]
+}

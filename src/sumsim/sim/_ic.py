@@ -59,7 +59,7 @@ class IcCalculator:
         self.sample_array = None
 
     def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[
-        hpotk.TermId, float]:
+            hpotk.TermId, float]:
         self.samples = samples
         self.used_terms = set(pf for sample in samples for pf in sample.phenotypic_features)
         self.sample_array = self._get_sample_array()
@@ -67,7 +67,7 @@ class IcCalculator:
         num_processes = multiprocessing.cpu_count() - 2  # Use all but 2 available CPU cores
         # Create a multiprocessing pool
         pool = multiprocessing.Pool(processes=num_processes)
-        results = list(pool.imap(self._get_term_freq, self._hpo.get_descendants(self._root, include_source=True)))
+        results = list(pool.imap(self._get_term_ic, self._hpo.get_descendants(self._root, include_source=True)))
         pool.close()
         ic_dict = {key: value for key, value in results}
         return ic_dict
@@ -83,7 +83,7 @@ class IcCalculator:
             i = i + 1
         return array
 
-    def _get_term_freq(self, term: hpotk.TermId) -> (hpotk.TermId, float):
+    def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
         term_descendants = set(i for i in self._hpo.get_descendants(term, include_source=True))
         relevant_descendants = [i.value for i in list(term_descendants & self.used_terms)]
         if len(relevant_descendants) > 0:
