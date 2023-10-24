@@ -14,13 +14,14 @@ class IcTransformer:
     Transform information contents to delta information contents.
     """
 
-    def __init__(self, hpo: hpotk.MinimalOntology, root: str = "HP:0000118",
-                 strategy: str = 'mean'):
+    def __init__(self, hpo: hpotk.MinimalOntology, root: str = "HP:0000118"):
         self._hpo = hpo
         self._root = hpo.get_term(root).identifier
-        self._strategy = strategy
+        self._strategy = str
 
-    def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float]) -> typing.Mapping[hpotk.TermId, float]:
+    def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float], strategy: str = 'mean') -> (
+            typing.Mapping)[hpotk.TermId, float]:
+        self._strategy = strategy
         pheno_abn = {i for i in self._hpo.graph.get_descendants(self._root, include_source=True)}
         dict_keys = set(ic_dict.keys())
         incompatible_terms = dict_keys.difference(dict_keys & pheno_abn)
