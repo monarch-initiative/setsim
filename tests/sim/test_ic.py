@@ -1,8 +1,10 @@
+import unittest
 from unittest import TestCase
 from math import log
+import typing
+
 import hpotk
 from hpotk import MinimalOntology
-import typing
 
 import sumsim.io
 from src.sumsim.sim._ic import IcCalculator, IcTransformer
@@ -52,7 +54,7 @@ class TestIcCalculator(TestCase):
             hpo.get_term("HP:0004021").identifier: 2,  # Tom and Matt
             hpo.get_term("HP:0003981").identifier: 3,  # Tom, Bill, and Kayla (HP:0003981 is an ancestor of HP:0004026)
             hpo.get_term("HP:0032599").identifier: 1,  # No one (minimum IC set count to 1 instead of 0)
-            hpo.get_term("HP:0004015").identifier: 3   # Tom, Matt, and Bill (HP:0004021 and HP:0004026 are descendants)
+            hpo.get_term("HP:0004015").identifier: 3  # Tom, Matt, and Bill (HP:0004021 and HP:0004026 are descendants)
         }
         for key, value in value_tests.items():
             self.assertEqual(ic_dict[key], log(5 / value))
@@ -87,14 +89,14 @@ class TestIcTransformer(TestCase):
             hpo.get_term("HP:0031264").identifier: 0,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0031263").identifier: 0,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0000119").identifier: 1.38629436112,  # HP:0000119 is an ancestor of HP:0032648 and the
-                                                                   # child of HP:0000118
+            # child of HP:0000118
             hpo.get_term("HP:0004021").identifier: 0.20273255405,  # HP:0004021 has 2 parents,
             # one with 2 annotations and the other with 3
             hpo.get_term("HP:0003981").identifier: 0.09589402415,  # HP:0003981 has 3 parents, 1 has 4 annotations
             # and the others have 3
             hpo.get_term("HP:0032599").identifier: 0,  # No one has term or parent
             hpo.get_term("HP:0004015").identifier: 0.14384103622  # HP:0004015 has 2 parents, 1 has 4 annotations
-                                                                  # and the other has 3
+            # and the other has 3
         }
         for key, value in value_tests.items():
             msg = (f'\n   {key.value} has the has a delta_ic of {delta_ic_dict[key]} when it is expected to be {value}.'
@@ -116,14 +118,14 @@ class TestIcTransformer(TestCase):
             hpo.get_term("HP:0031264").identifier: 0,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0031263").identifier: 0,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0000119").identifier: 1.38629436112,  # HP:0000119 is an ancestor of HP:0032648 and the
-                                                                   # child of HP:0000118
+            # child of HP:0000118
             hpo.get_term("HP:0004021").identifier: 0,  # HP:0004021 has 2 parents, one with 2 annotations
             # and the other with 3
             hpo.get_term("HP:0003981").identifier: 0,  # HP:0003981 has 3 parents, 1 has 4 annotations
             # and the others have 3
             hpo.get_term("HP:0032599").identifier: 0,  # No one has term or parent
             hpo.get_term("HP:0004015").identifier: 0  # HP:0004015 has 2 parents, 1 has 4 annotations
-                                                      # and the other has 3
+            # and the other has 3
         }
         for key, value in value_tests.items():
             msg = (f'\n   {key.value} has the has a delta_ic of {delta_ic_dict[key]} when it is expected to be {value}.'
@@ -132,7 +134,7 @@ class TestIcTransformer(TestCase):
 
     def test_transform(self):
         # Make sure error is thrown when illegal value is passed in dictionary
-        new_dict = {**self.ic_dict, hpo.get_term("HP:0000001").identifier: log(5/4)}
+        new_dict = {**self.ic_dict, hpo.get_term("HP:0000001").identifier: log(5 / 4)}
         with self.assertRaises(ValueError):
             self.transformer.transform(new_dict)
         mean_ic_dict = self.transformer.transform(self.ic_dict)
@@ -146,17 +148,21 @@ class TestIcTransformer(TestCase):
             hpo.get_term("HP:0031264").identifier: True,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0031263").identifier: True,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0000119").identifier: True,  # HP:0000119 is an ancestor of HP:0032648 and the
-                                                          # child of HP:0000118
+            # child of HP:0000118
             hpo.get_term("HP:0004021").identifier: False,  # HP:0004021 has 2 parents, one with 2 annotations
             # and the other with 3
             hpo.get_term("HP:0003981").identifier: False,  # HP:0003981 has 3 parents, 1 has 4 annotations
             # and the others have 3
             hpo.get_term("HP:0032599").identifier: True,  # No one has term or parent
             hpo.get_term("HP:0004015").identifier: False  # HP:0004015 has 2 parents, 1 has 4 annotations
-                                                          # and the other has 3
+            # and the other has 3
         }
         for key, equal in value_tests.items():
             if equal:
                 self.assertAlmostEqual(max_ic_dict[key], mean_ic_dict[key], 8)
             else:
                 self.assertNotAlmostEqual(max_ic_dict[key], mean_ic_dict[key], 8)
+
+
+if __name__ == '__main__':
+    unittest.main()
