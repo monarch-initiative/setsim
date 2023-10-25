@@ -1,12 +1,14 @@
-import multiprocessing
 import typing
 import warnings
-from math import log
-from statistics import mean
 
-import hpotk.algorithm
+from statistics import mean
+from sumsim.model import Sample
+import multiprocessing
+
+from math import log
 import numpy as np
-from sumsim.model._base import Sample
+
+import hpotk
 
 
 class IcTransformer:
@@ -19,8 +21,8 @@ class IcTransformer:
         self._root = hpo.get_term(root).identifier
         self._strategy = str
 
-    def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float], strategy: str = 'mean') -> (
-            typing.Mapping)[hpotk.TermId, float]:
+    def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float],
+                  strategy: str = 'mean') -> typing.Mapping[hpotk.TermId, float]:
         self._strategy = strategy
         pheno_abn = {i for i in self._hpo.graph.get_descendants(self._root, include_source=True)}
         dict_keys = set(ic_dict.keys())
@@ -72,8 +74,7 @@ class IcCalculator:
         self.used_pheno_abn = set()
         self.sample_array = None
 
-    def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[
-            hpotk.TermId, float]:
+    def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[hpotk.TermId, float]:
         self.samples = samples
         self.used_terms = set(pf for sample in samples for pf in sample.phenotypic_features)
         self.used_pheno_abn = self.used_terms & {i for i in self._hpo.get_descendants(self._root, include_source=True)}
@@ -82,7 +83,7 @@ class IcCalculator:
                           "in your ontology! These terms will be ignored.")
         self.sample_array = self._get_sample_array()
         # Define the number of processes to use
-        num_processes = multiprocessing.cpu_count() - 2  # Use all but 2 available CPU cores
+        num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
         # Create a multiprocessing pool
         pool = multiprocessing.Pool(processes=num_processes)
         results = list(pool.imap(self._get_term_ic, self._hpo.get_descendants(self._root, include_source=True)))
