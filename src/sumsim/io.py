@@ -9,7 +9,6 @@ from hpotk.model import TermId
 from phenopackets import Phenopacket, Cohort
 from sumsim.model._base import Sample
 
-
 # A generic type for a Protobuf message
 MESSAGE = typing.TypeVar('MESSAGE', bound=Message)
 
@@ -47,6 +46,7 @@ def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
             phenotypic_features.append(term_id)
     return Sample(identifier, phenotypic_features)
 
+
 def read_folder(fpath_pp: str) -> typing.Sequence[Sample]:
     samples = []
     for filename in os.listdir(fpath_pp):
@@ -55,6 +55,7 @@ def read_folder(fpath_pp: str) -> typing.Sequence[Sample]:
             if os.path.isfile(file_path):
                 samples.append(read_phenopacket(file_path))
     return samples
+
 
 def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, encoding: str = 'utf-8') -> MESSAGE:
     """
@@ -89,4 +90,3 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
     else:
         raise ValueError(f'Expected a path to phenopacket JSON, phenopacket JSON `str`, or an IO wrapper '
                          f'but received {type(fh)}')
-
