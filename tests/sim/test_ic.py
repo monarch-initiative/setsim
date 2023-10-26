@@ -1,18 +1,21 @@
+import os
 import unittest
-from unittest import TestCase
 from math import log
-import typing
+
+from pkg_resources import resource_filename
 
 import hpotk
 from hpotk import MinimalOntology
 
-import sumsim.io
-from src.sumsim.sim._ic import IcCalculator, IcTransformer
+import sumsim
+from sumsim.sim import IcCalculator, IcTransformer
 
-hpo: MinimalOntology = hpotk.ontology.load.obographs.load_minimal_ontology('../data/hp.toy.json')
+test_data = resource_filename(__name__, '../data')
+fpath_hpo = os.path.join(test_data, 'hp.toy.json')
+hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder("../data/test_phenopackets")
+test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'))
 
 
 # The table below shows which terms each sample has:
@@ -24,7 +27,7 @@ test_samples = sumsim.io.read_folder("../data/test_phenopackets")
 # Jed         False       False       False       False
 
 
-class TestIcCalculator(TestCase):
+class TestIcCalculator(unittest.TestCase):
     def test_calculate_ic_from_samples(self):
         calc = IcCalculator(hpo)
         ic_dict = calc.calculate_ic_from_samples(samples=test_samples)
@@ -64,7 +67,7 @@ class TestIcCalculator(TestCase):
             self.assertNotAlmostEqual(ic, 0, 8)
 
 
-class TestIcTransformer(TestCase):
+class TestIcTransformer(unittest.TestCase):
 
     def setUp(self):
         # These functions won't work if the above tests fail
