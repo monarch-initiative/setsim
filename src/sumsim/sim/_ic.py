@@ -125,7 +125,7 @@ class IcCalculator:
 
     def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
         term_descendants = set(i for i in self._hpo.get_descendants(term, include_source=True))
-        relevant_descendants = [i.value for i in list(term_descendants.intersection(self._sample_terms))]
+        relevant_descendants = [i.value for i in term_descendants.intersection(self._sample_terms)]
         if len(relevant_descendants) > 0:
             freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self._sample_array)
         else:
