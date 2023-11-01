@@ -1,0 +1,15 @@
+{
+  "id": "Matt",
+  "subject": {
+    "id": "Matt",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0004021",
+        "label": "Lytic defects of radial metaphysis"
+      }
+    }
+  ]
+}

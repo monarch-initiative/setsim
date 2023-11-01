@@ -26,11 +26,11 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-    "hpo-toolkit >= 0.3.0"
+    "hpo-toolkit >= 0.3.0",
+    "phenopackets >= 2.0.2, <3.0.0"
 ]
 [project.optional-dependencies]
-dev = [
-]
+test = ["pytest>=7.0.0, <=8.0.0"]
 
 [project.urls]
 "Repository" = "https://github.com/monarch-initiative/sumsim"

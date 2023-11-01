@@ -68,7 +68,6 @@ class DiseaseIdentifier(hpotk.model.Identified, hpotk.model.Named):
         return str(self)
 
 
-
 class Sample(Phenotyped, Labeled):
     """
     `Sample` describes the requirements for the subject data, as far as C2S2 is concerned.
@@ -136,7 +135,6 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
     def label(self) -> str:
         """"""
         return self._label
-
 
     @property
     def phenotypic_features(self) -> typing.Sequence[hpotk.TermId]:

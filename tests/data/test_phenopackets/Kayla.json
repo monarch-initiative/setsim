@@ -1,0 +1,15 @@
+{
+  "id": "Kayla",
+  "subject": {
+    "id": "Kayla",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0003981",
+        "label": "Broad radius"
+      }
+    }
+  ]
+}
