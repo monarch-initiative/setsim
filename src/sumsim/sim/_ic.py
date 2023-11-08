@@ -1,3 +1,4 @@
+import itertools
 import math
 import multiprocessing
 import typing
@@ -9,6 +10,7 @@ import numpy as np
 from statistics import mean
 
 from sumsim.model import Sample
+from sumsim.sim.phenomizer import TermPair
 
 
 class IcTransformer:
@@ -109,6 +111,18 @@ class IcCalculator:
 
     def calculate_ic_from_diseases(self):
         return None
+
+    def create_mica_ic_dict(self, ic_dict) -> typing.Mapping[TermPair, float]:
+        # Find all combinations
+        term_pairs = list(itertools.combinations(ic_dict.keys(), 2))
+        mica_dict = {}
+        for term_pair in term_pairs:
+            term_1_ancestors = set(self._hpo.get_ancestors(term_pair[0], include_source=True))
+            term_2_ancestors = set(self._hpo.get_ancestors(term_pair[1], include_source=True))
+            shared_ancestors = term_1_ancestors.intersection(term_2_ancestors)
+            mica_dict[TermPair.of(term_pair[0], term_pair[1])] = \
+                (max(ic_dict.get(ancestor, 0.0) for ancestor in shared_ancestors))
+        return mica_dict
 
     @staticmethod
     def _get_sample_array(samples: typing.Sequence[Sample],

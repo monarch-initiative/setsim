@@ -9,6 +9,7 @@ from hpotk import MinimalOntology
 
 import sumsim
 from sumsim.sim import IcCalculator, IcTransformer
+from sumsim.sim.phenomizer import TermPair
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -66,6 +67,12 @@ class TestIcCalculator(unittest.TestCase):
         for ic in set(ic_dict.values()):
             self.assertNotAlmostEqual(ic, 0, 8)
 
+        # Test mica dictionary creation
+        mica_dict = calc.create_mica_ic_dict(ic_dict)
+        test_pair_1 = TermPair.of(hpo.get_term("HP:0000118").identifier, hpo.get_term("HP:0032648").identifier)
+        test_pair_2 = TermPair.of(hpo.get_term("HP:0032648").identifier, hpo.get_term("HP:0031264").identifier)
+        self.assertAlmostEqual(0.22314355131, mica_dict.get(test_pair_1, 0.0), 8)
+        self.assertAlmostEqual(log(5/1), mica_dict.get(test_pair_2, 0.0), 8)
 
 class TestIcTransformer(unittest.TestCase):
 
