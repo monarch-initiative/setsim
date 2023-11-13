@@ -1,6 +1,8 @@
 import typing
 import hpotk
 
+from typing import Set
+
 from sumsim.model import Phenotyped
 from ._base import SimilarityKernel, SimilarityResult
 
@@ -25,7 +27,7 @@ class SumSimSimilarityKernel(SimilarityKernel):
         features_under_root = set(self._hpo.get_descendants(self._root, include_source=True))
         return a_features.intersection(b_features).intersection(features_under_root)
 
-    def _calculate_total_ic(self, all_features: set[hpotk.TermId]) -> float:
+    def _calculate_total_ic(self, all_features: Set[hpotk.TermId]) -> float:
         try:
             shared_terms = sum(self._delta_ic.get(term, None) for term in all_features)
         except:

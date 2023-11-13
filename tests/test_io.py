@@ -30,6 +30,19 @@ class TestIo(unittest.TestCase):
         self.assertIn(hpo.get_term("HP:0032648").identifier, set(sample_dict["Tom"].phenotypic_features))
         self.assertNotIn(hpo.get_term("HP:0031264").identifier, set(sample_dict["Tom"].phenotypic_features))
 
+    def test_read_gene_to_phenotype(self):
+        path = os.path.join(data_dir, "MiniG2Ph.txt")
+        diseases = sumsim.io.read_gene_to_phenotype(path)
+        self.assertEqual(5639, len(diseases))
+        test_pfs = {hpo.get_term(i).identifier for i in ['HP:0001257',
+                                                         'HP:0001263',
+                                                         'HP:0001276',
+                                                         'HP:0001290',
+                                                         'HP:0001629',
+                                                         'HP:0001638']}
+        self.assertEqual(set(diseases[2].phenotypic_features),
+                         test_pfs)
+
 
 if __name__ == '__main__':
     unittest.main()

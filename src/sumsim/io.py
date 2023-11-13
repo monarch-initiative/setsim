@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import pandas as pd
 import typing
 
 from google.protobuf.json_format import Parse
@@ -9,6 +10,7 @@ from hpotk import TermId
 from phenopackets import Phenopacket, Cohort
 
 from sumsim.model import Sample
+from sumsim.model import DiseaseModel
 
 # A generic type for a Protobuf message
 MESSAGE = typing.TypeVar('MESSAGE', bound=Message)
@@ -91,3 +93,19 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
     else:
         raise ValueError(f'Expected a path to phenopacket JSON, phenopacket JSON `str`, or an IO wrapper '
                          f'but received {type(fh)}')
+
+
+def read_gene_to_phenotype(fpath_g2p: str) -> typing.Sequence[DiseaseModel]:
+    df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
+    disease2phe = {}
+    for index, row in df_g2ph.iterrows():
+        if row['disease_id'] not in disease2phe:
+            disease2phe[row['disease_id']] = [row['hpo_id']]
+        else:
+            disease2phe[row['disease_id']].append(row['hpo_id'])
+    diseases = []
+    for disease, terms in disease2phe.items():
+        list_ids = [TermId.from_curie(term) for term in terms]
+        diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids))
+    return diseases
+
