@@ -120,7 +120,7 @@ class IcCalculator:
 
         results = []
         for result in tqdm(pool.imap(self._get_term_ic, self._hpo.get_descendants(self._root, include_source=True),
-                                     chunksize=100),
+                                     chunksize=200),
                            total=len(list(self._hpo.get_descendants(self._root, include_source=True)))):
             results.append(result)
 
@@ -138,7 +138,8 @@ class IcCalculator:
         ic = math.log(len(self._phenotyped_array) / freq)
         return term, ic
 
-    def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId], ic_dict=None)\
+    def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId] = None,
+                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None) \
             -> typing.Mapping[TermPair, float]:
         """
         Create a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer. The
@@ -147,10 +148,15 @@ class IcCalculator:
 
         @param terms_in_samples: This is the set of terms that are included in the sample to be analyzed. Only the
         terminal terms in each sample are necessary to include.
+        @param samples: Allows the user to supply a list of Phenotyped sample/diseases that are being analyzed as an
+        alternative to providing the set of annotated terms.
         @param ic_dict: A dictionary that goes from hpotk.TermId's to their respective IC's. Not needed for class
         instances that already have an ic_dict stored.
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
+        if terms_in_samples is None and samples is None:
+            raise ValueError("Either 'terms_in_samples' or 'samples' must be provided.")
+
         used_terms = set(self._hpo.get_descendants(self._root, include_source=True))
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
                           term in used_terms}
@@ -164,7 +170,10 @@ class IcCalculator:
             raise ValueError("An IC dictionary was provided when there is already one in the class object.")
 
         # Use generator expression for term pairs
-        used_terms_list = list(terms_in_samples.intersection(set(self._hpo.get_descendants(self._root, include_source=True))))
+        if terms_in_samples is None:
+            terms_in_samples = set(feature for sample in samples for feature in sample.phenotypic_features)
+        used_terms_list = list(terms_in_samples.intersection(set(self._hpo.get_descendants(self._root,
+                                                                                           include_source=True))))
         term_pairs = itertools.combinations(used_terms_list, 2)
         total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
