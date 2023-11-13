@@ -2,15 +2,15 @@ import csv
 import itertools
 import math
 import multiprocessing
+import numpy as np
 import typing
 import warnings
-
-import hpotk
-import numpy as np
 
 from datetime import datetime
 from statistics import mean
 from tqdm import tqdm
+
+import hpotk
 
 from sumsim.model import Sample, Phenotyped, DiseaseModel
 from sumsim.sim.phenomizer import TermPair
