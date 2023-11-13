@@ -141,11 +141,15 @@ class IcCalculator:
     def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId], ic_dict=None)\
             -> typing.Mapping[TermPair, float]:
         """
+        Create a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer. The
+        dictionary requires only the terms that are annotated in the samples being analyzed. (It is not necessary to
+        include the parents of terms that are themselves not explicitly annotated in a sample.)
 
         @param terms_in_samples: This is the set of terms that are included in the sample to be analyzed. Only the
-                                 terminal terms in each sample are necessary to include.
-        @param ic_dict:
-        @return:
+        terminal terms in each sample are necessary to include.
+        @param ic_dict: A dictionary that goes from hpotk.TermId's to their respective IC's. Not needed for class
+        instances that already have an ic_dict stored.
+        @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
         used_terms = set(self._hpo.get_descendants(self._root, include_source=True))
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
@@ -170,6 +174,16 @@ class IcCalculator:
         return {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list)}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:
+        """
+        Create a dictionary that goes from TermPairs to MICA IC to be used for all possible pairs of terms under the
+        chosen root under the chosen ontology.
+
+        @param file_path: Path and name for the MICA IC dictionary to be saved.
+        @param ic_dict: A dictionary that goes from hpotk.TermId's to their respective IC's. Not needed for class
+        instances that already have an ic_dict stored.
+        @param hpoa_version:
+        @return: Return a dictionary of TermPairs to MICA IC of that pair.
+        """
         used_terms = set(self._hpo.get_descendants(self._root, include_source=True))
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
                           term in used_terms}
