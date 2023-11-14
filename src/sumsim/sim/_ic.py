@@ -178,9 +178,13 @@ class IcCalculator:
         total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
 
+        # Create matched set
+        matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in terms_in_samples}
+
         # Combine the dictionaries into a single dictionary
         term_pairs = itertools.combinations(used_terms_list, 2)
-        return {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list)}
+        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list)}
+        return {**matched_dict, **mica_dict}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:
         """
@@ -249,6 +253,9 @@ class IcCalculator:
 
             # Write the header
             writer.writerow(["term_a", "term_b", "ic_mica"])
+
+            # Write matched set
+            [writer.writerow([term, term, ic]) for term, ic in self.ic_dict.items()]
 
             # Write the term pairs and IC values with tqdm
             for term, ic in tqdm(zip(term_pairs, ic_list), total=total, desc="Writing to CSV"):
