@@ -71,11 +71,13 @@ class TestIcCalculator(unittest.TestCase):
         sample_term_string = ["HP:0004021", "HP:0003981", "HP:0004026", "HP:0032648"]
         sample_terms = set(hpo.get_term(term).identifier for term in sample_term_string)
         mica_dict = calc.create_mica_ic_dict(sample_terms, ic_dict)
-        self.assertEqual(mica_dict, calc.create_mica_ic_dict(sample_terms))
+        self.assertEqual(mica_dict, calc.create_mica_ic_dict(samples=test_samples))
         test_pair_1 = TermPair.of(hpo.get_term("HP:0004021").identifier, hpo.get_term("HP:0004026").identifier)
         test_pair_2 = TermPair.of(hpo.get_term("HP:0032648").identifier, hpo.get_term("HP:0004026").identifier)
+        test_pair_3 = TermPair.of(hpo.get_term("HP:0032648").identifier, hpo.get_term("HP:0032648").identifier)
         self.assertAlmostEqual(log(5 / 3), mica_dict.get(test_pair_1, 0.0), 8)
         self.assertAlmostEqual(log(5 / 4), mica_dict.get(test_pair_2, 0.0), 8)
+        self.assertAlmostEqual(log(5 / 1), mica_dict.get(test_pair_3, 0.0), 8)
 
 
 class TestIcTransformer(unittest.TestCase):
