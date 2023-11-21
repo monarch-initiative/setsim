@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import typing
 
+from collections import defaultdict
 from google.protobuf.json_format import Parse
 from google.protobuf.message import Message
 from hpotk import TermId
@@ -97,12 +98,9 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
 
 def read_gene_to_phenotype(fpath_g2p: str) -> typing.Sequence[DiseaseModel]:
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
-    disease2phe = {}
+    disease2phe = defaultdict(list)
     for index, row in df_g2ph.iterrows():
-        if row['disease_id'] not in disease2phe:
-            disease2phe[row['disease_id']] = [row['hpo_id']]
-        else:
-            disease2phe[row['disease_id']].append(row['hpo_id'])
+        disease2phe[row['disease_id']].append(row['hpo_id'])
     diseases = []
     for disease, terms in disease2phe.items():
         list_ids = [TermId.from_curie(term) for term in terms]

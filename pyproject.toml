@@ -28,6 +28,7 @@ dynamic = ["version"]
 dependencies = [
     "hpo-toolkit >= 0.3.0",
     "phenopackets >= 2.0.2, <3.0.0"
+    "pandas >= 1.3.0"
 ]
 [project.optional-dependencies]
 test = ["pytest>=7.0.0, <=8.0.0"]

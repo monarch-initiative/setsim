@@ -30,7 +30,9 @@ class SumSimSimilarityKernel(SimilarityKernel):
     def _calculate_total_ic(self, all_features: Set[hpotk.TermId]) -> float:
         try:
             shared_terms = sum(self._delta_ic.get(term, None) for term in all_features)
-        except:
-            print("Samples share features that are not included in the provided dictionary.")
+        except KeyError:
+            features = [feature for feature in all_features if self._delta_ic.get(feature, None) is None]
+            print(f'Samples share the following features which are not included in the provided dictionary:'
+                  f'\n{features}')
             raise
         return shared_terms

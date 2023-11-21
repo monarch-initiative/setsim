@@ -6,6 +6,7 @@ from pkg_resources import resource_filename
 
 import hpotk
 from hpotk import MinimalOntology
+from hpotk import TermId
 
 import sumsim
 from sumsim.sim import IcCalculator, IcTransformer
@@ -69,7 +70,7 @@ class TestIcCalculator(unittest.TestCase):
 
         # Test mica dictionary creation
         sample_term_string = ["HP:0004021", "HP:0003981", "HP:0004026", "HP:0032648"]
-        sample_terms = set(hpo.get_term(term).identifier for term in sample_term_string)
+        sample_terms = set(TermId.from_curie(term) for term in sample_term_string)
         mica_dict = calc.create_mica_ic_dict(sample_terms, ic_dict)
         self.assertEqual(mica_dict, calc.create_mica_ic_dict(samples=test_samples))
         test_pair_1 = TermPair.of(hpo.get_term("HP:0004021").identifier, hpo.get_term("HP:0004026").identifier)
