@@ -90,12 +90,13 @@ class IcCalculator:
         if root_term is None:
             raise ValueError(f'Root {root} is not in provided HPO!')
         self._root = root_term.identifier
+        self._subontology_terms = set(self._hpo.get_descendants(self._root, include_source=True))
 
         self._phenotypes = None
         self._phenotyped_terms = set()
         self._phenotyped_array = None
         self.ic_dict = None
-        self._anc_dict = None  # used for calculating mica but could be calculated here
+        self._anc_dict = None  # used for calculating mica_ic_dict
 
     def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[hpotk.TermId, float]:
         return self._calculate_ic_from_phenotyped(samples)
@@ -107,9 +108,9 @@ class IcCalculator:
             -> typing.Mapping[hpotk.TermId, float]:
         self._phenotypes = phenotypes
         all_terms_in_samples = set(pf for phenotyped in phenotypes for pf in phenotyped.phenotypic_features)
-        self._phenotyped_terms = all_terms_in_samples.intersection(
-            {i for i in self._hpo.get_descendants(self._root, include_source=True)})
-        if len(all_terms_in_samples) != len(self._phenotyped_terms):
+        self._phenotyped_terms = all_terms_in_samples.intersection(self._hpo.get_descendants(self._root,
+                                                                                             include_source=True))
+        if len(all_terms_in_samples) > len(self._phenotyped_terms):
             warnings.warn("Your samples include terms that are not included as a Phenotypic abnormality (HP:0000118) "
                           "in your ontology! These terms will be ignored.")
         self._phenotyped_array = self._get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
@@ -119,9 +120,8 @@ class IcCalculator:
         pool = multiprocessing.Pool(processes=num_processes)
 
         results = []
-        for result in tqdm(pool.imap(self._get_term_ic, self._hpo.get_descendants(self._root, include_source=True),
-                                     chunksize=200),
-                           total=len(list(self._hpo.get_descendants(self._root, include_source=True)))):
+        for result in tqdm(pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200),
+                           total=len(self._subontology_terms)):
             results.append(result)
 
         pool.close()
@@ -157,10 +157,9 @@ class IcCalculator:
         if terms_in_samples is None and samples is None:
             raise ValueError("Either 'terms_in_samples' or 'samples' must be provided.")
 
-        used_terms = set(self._hpo.get_descendants(self._root, include_source=True))
-        self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
-                          term in used_terms}
-
+        used_terms = self._subontology_terms
+        self._anc_dict = {term: used_terms.intersection(self._hpo.get_ancestors(term, include_source=True)) for term in
+                          used_terms}
         if self.ic_dict is None:
             if ic_dict is None:
                 raise ValueError("No IC dictionary was provided or exists in the class object.")
@@ -172,8 +171,8 @@ class IcCalculator:
         # Use generator expression for term pairs
         if terms_in_samples is None:
             terms_in_samples = set(feature for sample in samples for feature in sample.phenotypic_features)
-        used_terms_list = list(terms_in_samples.intersection(set(self._hpo.get_descendants(self._root,
-                                                                                           include_source=True))))
+        used_terms_list = list(terms_in_samples.intersection(self._hpo.get_descendants(self._root,
+                                                                                       include_source=True)))
         term_pairs = itertools.combinations(used_terms_list, 2)
         total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
@@ -197,7 +196,7 @@ class IcCalculator:
         @param hpoa_version:
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
-        used_terms = set(self._hpo.get_descendants(self._root, include_source=True))
+        used_terms = self._subontology_terms
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
                           term in used_terms}
 

@@ -40,8 +40,8 @@ class TestSumsim(unittest.TestCase):
 
     def test_calculate_total_ic(self):
         kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
-        ic = kernel._calculate_total_ic({hpo.get_term("HP:0000118").identifier})
-        self.assertAlmostEqual(ic, log(5 / 4), 8)  # add assertion here
+        root_ic = kernel._calculate_total_ic({hpo.get_term("HP:0000118").identifier})
+        self.assertAlmostEqual(root_ic, log(5 / 4), 8)  # add assertion here
         used_terms = ic_dict.keys()
         for term, ic in ic_dict.items():
             term_ancestors = set(hpo.graph.get_ancestors(term, include_source=True)).intersection(used_terms)
