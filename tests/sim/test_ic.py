@@ -47,7 +47,7 @@ class TestIcCalculator(unittest.TestCase):
 
         # Test that Phenotypic abnormality is present in 4 out of 5 samples
         phe_abn = hpo.get_term("HP:0000118")
-        self.assertAlmostEqual(0.22314355131, ic_dict[phe_abn.identifier], 8)
+        self.assertAlmostEqual(0.0, ic_dict[phe_abn.identifier], 8)
 
         # Test various values
         # Dictionary - DefaultTermId : Number of samples with feature
@@ -62,11 +62,7 @@ class TestIcCalculator(unittest.TestCase):
             hpo.get_term("HP:0004015").identifier: 3  # Tom, Matt, and Bill (HP:0004021 and HP:0004026 are descendants)
         }
         for key, value in value_tests.items():
-            self.assertEqual(ic_dict[key], log(5 / value))
-
-        # Test that no term was assigned to all samples
-        for ic in set(ic_dict.values()):
-            self.assertNotAlmostEqual(ic, 0, 8)
+            self.assertEqual(ic_dict[key], log(4 / value))
 
         # Test mica dictionary creation
         sample_term_string = ["HP:0004021", "HP:0003981", "HP:0004026", "HP:0032648"]
@@ -76,9 +72,9 @@ class TestIcCalculator(unittest.TestCase):
         test_pair_1 = TermPair.of(hpo.get_term("HP:0004021").identifier, hpo.get_term("HP:0004026").identifier)
         test_pair_2 = TermPair.of(hpo.get_term("HP:0032648").identifier, hpo.get_term("HP:0004026").identifier)
         test_pair_3 = TermPair.of(hpo.get_term("HP:0032648").identifier, hpo.get_term("HP:0032648").identifier)
-        self.assertAlmostEqual(log(5 / 3), mica_dict.get(test_pair_1, 0.0), 8)
-        self.assertAlmostEqual(log(5 / 4), mica_dict.get(test_pair_2, 0.0), 8)
-        self.assertAlmostEqual(log(5 / 1), mica_dict.get(test_pair_3, 0.0), 8)
+        self.assertAlmostEqual(log(4 / 3), mica_dict.get(test_pair_1, 0.0), 8)
+        self.assertAlmostEqual(log(4 / 4), mica_dict.get(test_pair_2, 0.0), 8)
+        self.assertAlmostEqual(log(4 / 1), mica_dict.get(test_pair_3, 0.0), 8)
 
 
 class TestIcTransformer(unittest.TestCase):
@@ -125,8 +121,10 @@ class TestIcTransformer(unittest.TestCase):
         key_iterator = iter(delta_ic_dict)
         self.assertIsInstance(next(key_iterator), hpotk.TermId)
         self.assertEqual(set(delta_ic_dict), set(self.ic_dict))
-        # IC and delta_ic should be the same for the root since the root has no parents (parent_ic=0).
-        self.assertEqual(delta_ic_dict[self.root_identifier], self.ic_dict[self.root_identifier])
+        # IC and delta_ic should be the same for the children of the root since the ic of the root is zero.
+        delta_ic_of_root_children = [delta_ic_dict[child] for child in hpo.graph.get_children(self.root_identifier)]
+        ic_of_root_children = [self.ic_dict[child] for child in hpo.graph.get_children(self.root_identifier)]
+        self.assertEqual(delta_ic_of_root_children, ic_of_root_children)
 
         # Test various values
         # Dictionary - DefaultTermId : New IC

@@ -75,6 +75,27 @@ class IcTransformer:
         return delta_ic_dict
 
 
+def import_mica_ic_dict(file_path: str) -> typing.Mapping[TermPair, float]:
+    """
+    Import a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer.
+
+    @param file_path: Path and name for the MICA IC dictionary to be imported.
+    @return: Return a dictionary of TermPairs to MICA IC of that pair.
+    """
+    # Read the CSV file
+    with open(file_path, "r") as csv_file:
+        reader = csv.reader(csv_file, delimiter=",")
+        next(reader)
+        next(reader)
+        header = next(reader)
+        if header[0] != "term_a" or header[1] != "term_b" or header[2] != "ic_mica":
+            raise ValueError("The header of the CSV file does not match the expected format.")
+
+        # Create the dictionary
+        mica_ic_dict = {TermPair.of(row[0], row[1]): float(row[2]) for row in reader}
+    return mica_ic_dict
+
+
 class IcCalculator:
     """
     Create a dictionary providing the information content of terms.
@@ -106,13 +127,18 @@ class IcCalculator:
 
     def _calculate_ic_from_phenotyped(self, phenotypes: typing.Sequence[Phenotyped]) \
             -> typing.Mapping[hpotk.TermId, float]:
-        self._phenotypes = phenotypes
+
         all_terms_in_samples = set(pf for phenotyped in phenotypes for pf in phenotyped.phenotypic_features)
         self._phenotyped_terms = all_terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                              include_source=True))
         if len(all_terms_in_samples) > len(self._phenotyped_terms):
             warnings.warn("Your samples include terms that are not included as a Phenotypic abnormality (HP:0000118) "
                           "in your ontology! These terms will be ignored.")
+        self._phenotypes = [phenotype for phenotype in phenotypes if self._phenotyped_terms.intersection(
+            phenotype.phenotypic_features) != set()]
+        if len(phenotypes) > len(self._phenotypes):
+            warnings.warn("Some of your samples include terms that are not included as a Phenotypic abnormality "
+                          "(HP:0000118) in your ontology! These samples will be ignored.")
         self._phenotyped_array = self._get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
         # Define the number of processes to use
         num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
@@ -182,7 +208,7 @@ class IcCalculator:
 
         # Combine the dictionaries into a single dictionary
         term_pairs = itertools.combinations(used_terms_list, 2)
-        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list)}
+        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list) if ic > 0}
         return {**matched_dict, **mica_dict}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:
@@ -258,7 +284,8 @@ class IcCalculator:
 
             # Write the term pairs and IC values with tqdm
             for term, ic in tqdm(zip(term_pairs, ic_list), total=total, desc="Writing to CSV"):
-                writer.writerow([term[0], term[1], ic])
+                if ic > 0:
+                    writer.writerow([term[0], term[1], ic])
 
         print(f"CSV file '{file_path}' has been created.")
         return None
@@ -276,4 +303,3 @@ class IcCalculator:
                     array[term.value][i] = True
             i = i + 1
         return array
-

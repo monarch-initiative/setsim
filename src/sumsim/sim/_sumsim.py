@@ -12,7 +12,7 @@ class SumSimSimilarityKernel(SimilarityKernel):
     def __init__(self, hpo: hpotk.GraphAware,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float], root: str = "HP:0000118"):
         self._hpo = hpo.graph
-        self._root = root
+        self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
         self._delta_ic = delta_ic_dict
 
     def compute(self, a: Phenotyped, b: Phenotyped) -> SimilarityResult:
@@ -24,8 +24,7 @@ class SumSimSimilarityKernel(SimilarityKernel):
                          self._hpo.get_ancestors(pf, include_source=True))
         b_features = set(ancestor for pf in b.phenotypic_features for ancestor in
                          self._hpo.get_ancestors(pf, include_source=True))
-        features_under_root = set(self._hpo.get_descendants(self._root, include_source=True))
-        return a_features.intersection(b_features).intersection(features_under_root)
+        return a_features.intersection(b_features).intersection(self._features_under_root)
 
     def _calculate_total_ic(self, all_features: Set[hpotk.TermId]) -> float:
         try:
