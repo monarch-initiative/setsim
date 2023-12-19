@@ -7,6 +7,7 @@ from hpotk import MinimalOntology
 from pkg_resources import resource_filename
 
 from sumsim.benchmark import PatientGenerator
+from sumsim.benchmark._nulldistribution import GetNullDistributions
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -14,7 +15,7 @@ hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 
 class TestPatientGenerator(unittest.TestCase):
-    def test_something(self):
+    def test_generation(self):
         number_of_patients = 10
         p_gen = PatientGenerator(hpo, number_of_patients, [1, 2, 10, 3])
         list1 = []

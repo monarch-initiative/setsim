@@ -1,1 +1,1 @@
-from ._create_test_patients import PatientGenerator
+from ._nulldistribution import PatientGenerator
