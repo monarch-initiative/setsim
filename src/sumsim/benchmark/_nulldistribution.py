@@ -20,6 +20,8 @@ class PatientGenerator:
         self.root = root
         self.hpo = hpo.graph
         self.num_patients = num_patients
+        if min(num_features_per_patient) < 1:
+            raise ValueError("Number of features must be greater than 0.")
         self.num_features_per_patient = num_features_per_patient
         self.max_features = max(num_features_per_patient)
         self.terms_under_root = list(self.hpo.get_descendants(root, include_source=True))
@@ -52,7 +54,7 @@ class PatientGenerator:
         return samples
 
 
-class GetNullDistributions:
+class GetNullDistribution:
 
     def __init__(self, disease: DiseaseModel, method: str, hpo: hpotk.MinimalOntology, num_patients: int,
                  num_features_per_patient: Sequence[int], mic_dict: typing.Mapping[TermPair, float] = None,
@@ -67,11 +69,9 @@ class GetNullDistributions:
         self.delta_ic_dict = delta_ic_dict
         self.root = root
         self.column_names = [str(col) for col in self.num_features_per_patient]
+        self.patient_similarity_array = self._get_null_distribution()
 
-        array_type = [(col, float) for col in self.column_names]
-        self.patient_similarity_array = np.zeros(self.num_patients, dtype=array_type)
-
-    def _get_null_distribution(self, *args, **kwargs):
+    def _get_null_distribution(self):
         """Get null distribution.
 
         Returns
@@ -91,16 +91,18 @@ class GetNullDistributions:
             kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
         else:
             raise ValueError("Invalid method.")
-
+        array_type = [(col, float) for col in self.column_names]
+        patient_similarity_array = np.zeros(self.num_patients, dtype=array_type)
         p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
         for patient_num, patients in enumerate(p_gen.generate()):
             similarities = [kernel.compute(patient, self.disease).similarity for patient in patients]
-            self.patient_similarity_array[:][patient_num] = similarities
+            for col_name, similarity in zip(self.column_names, similarities):
+                patient_similarity_array[patient_num][col_name] = similarity
         for col_name in self.column_names:
-            col_values = self.patient_similarity_array[col_name]
+            col_values = patient_similarity_array[col_name]
             col_values.sort()
-            self.patient_similarity_array[col_name] = col_values
-        return self.patient_similarity_array
+            patient_similarity_array[col_name] = col_values
+        return patient_similarity_array
 
     def get_pval(self, ic: float, num_features: int):
         """Get p-value.
@@ -116,6 +118,11 @@ class GetNullDistributions:
         pval : float
             p-value.
         """
-        col_name = str(num_features)
+        if num_features in self.num_features_per_patient:
+            col_name = str(num_features)
+        elif num_features < 1:
+            raise ValueError("Number of features must be greater than 0.")
+        else:
+            col_name = str(min(self.num_features_per_patient, key=lambda x: abs(x - num_features)))
         pval = (self.patient_similarity_array[col_name] >= ic).sum() / len(self.patient_similarity_array)
         return pval

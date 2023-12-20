@@ -132,13 +132,14 @@ class IcCalculator:
         self._phenotyped_terms = all_terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                              include_source=True))
         if len(all_terms_in_samples) > len(self._phenotyped_terms):
-            warnings.warn("Your samples include terms that are not included as a Phenotypic abnormality (HP:0000118) "
-                          "in your ontology! These terms will be ignored.")
+            excluded_features = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
+            warnings.warn(f"The terms {excluded_features} are not included under the chosen root ({self._root})"
+                          " in your ontology! These samples will be ignored.")
         self._phenotypes = [phenotype for phenotype in phenotypes if self._phenotyped_terms.intersection(
             phenotype.phenotypic_features) != set()]
         if len(phenotypes) > len(self._phenotypes):
-            warnings.warn("Some of your samples include terms that are not included as a Phenotypic abnormality "
-                          "(HP:0000118) in your ontology! These samples will be ignored.")
+            excluded_phenotypes = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
+            warnings.warn(f"The sample(s) {excluded_phenotypes} were removed because they have no features.")
         self._phenotyped_array = self._get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
         # Define the number of processes to use
         num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
