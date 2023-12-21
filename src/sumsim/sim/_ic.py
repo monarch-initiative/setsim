@@ -132,9 +132,9 @@ class IcCalculator:
         self._phenotyped_terms = all_terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                              include_source=True))
         if len(all_terms_in_samples) > len(self._phenotyped_terms):
-            excluded_features = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
+            excluded_features = [term for term in all_terms_in_samples if term not in self._phenotyped_terms]
             warnings.warn(f"The terms {excluded_features} are not included under the chosen root ({self._root})"
-                          " in your ontology! These samples will be ignored.")
+                          " in your ontology! These terms will be ignored.")
         self._phenotypes = [phenotype for phenotype in phenotypes if self._phenotyped_terms.intersection(
             phenotype.phenotypic_features) != set()]
         if len(phenotypes) > len(self._phenotypes):

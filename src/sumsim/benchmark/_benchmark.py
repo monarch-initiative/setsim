@@ -7,7 +7,7 @@ import hpotk
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
 from ._nulldistribution import GetNullDistribution
-from ..sim import SumSimSimilarityKernel
+from sumsim.sim import SumSimSimilarityKernel
 
 
 class Benchmark:
@@ -16,13 +16,15 @@ class Benchmark:
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
         self.hpo = hpo
-        self.patients = patients
+        self.patients = patients  # TODO: create function to validate patient phenotypic features
         self.n_iter_distribution = n_iter_distribution
         self.num_features_distribution = num_features_distribution
         self.mica_dict = mica_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
-        self.patient_table = pd.DataFrame(index = [patient.label for patient in self.patients])
+        self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
+                                          columns=['num_features'],
+                                          data=[len(patient.phenotypic_features) for patient in self.patients])
 
     def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel]):
         for disease in diseases:
@@ -57,6 +59,3 @@ class Benchmark:
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
         self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)
         pass
-
-
-

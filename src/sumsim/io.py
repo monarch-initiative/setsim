@@ -5,12 +5,14 @@ import pandas as pd
 import typing
 
 from collections import defaultdict
+from typing import Sequence, Tuple, List, Any
+
 from google.protobuf.json_format import Parse
 from google.protobuf.message import Message
 from hpotk import TermId
 from phenopackets import Phenopacket, Cohort
 
-from sumsim.model import Sample
+from sumsim.model import Sample, DiseaseModel
 from sumsim.model import DiseaseModel
 
 # A generic type for a Protobuf message
@@ -51,7 +53,7 @@ def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
     return Sample(identifier, phenotypic_features)
 
 
-def read_folder(fpath_pp: str) -> typing.Sequence[Sample]:
+def read_folder(fpath_pp: str) -> Sequence[Sample]:
     samples = []
     for filename in os.listdir(fpath_pp):
         if filename.endswith(".json"):
@@ -96,14 +98,19 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
                          f'but received {type(fh)}')
 
 
-def read_gene_to_phenotype(fpath_g2p: str) -> typing.Sequence[DiseaseModel]:
+def read_gene_to_phenotype(fpath_g2p: str, return_gene2phe: bool = False) \
+        -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
     disease2phe = defaultdict(list)
+    gene2phe = defaultdict(set)
     for index, row in df_g2ph.iterrows():
         disease2phe[row['disease_id']].append(row['hpo_id'])
+        if return_gene2phe:
+            gene2phe[row['gene_symbol']].add(row['hpo_id'])
     diseases = []
     for disease, terms in disease2phe.items():
         list_ids = [TermId.from_curie(term) for term in terms]
         diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids))
+    if return_gene2phe:
+        return diseases, gene2phe
     return diseases
-

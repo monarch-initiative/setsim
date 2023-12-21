@@ -1,12 +1,14 @@
+import multiprocessing
 import typing
 import random
 from typing import Sequence
 
 import hpotk
 import numpy as np
+from tqdm import tqdm
 
-from sumsim.model import Sample, DiseaseModel
-from sumsim.sim import SumSimSimilarityKernel
+from sumsim.model import Sample, DiseaseModel, Phenotyped
+from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 
 
@@ -92,12 +94,15 @@ class GetNullDistribution:
         else:
             raise ValueError("Invalid method.")
         array_type = [(col, float) for col in self.column_names]
-        patient_similarity_array = np.zeros(self.num_patients, dtype=array_type)
         p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
-        for patient_num, patients in enumerate(p_gen.generate()):
-            similarities = [kernel.compute(patient, self.disease).similarity for patient in patients]
-            for col_name, similarity in zip(self.column_names, similarities):
-                patient_similarity_array[patient_num][col_name] = similarity
+        kernel_wrapper = SimilarityWrapper(kernel, self.disease)
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count() - 2) as pool:
+            similarities = [similarity_list for similarity_list in
+                            tqdm(
+                                pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=100),
+                                total=self.num_patients)
+                            ]
+        patient_similarity_array = np.array(similarities, dtype=array_type)
         for col_name in self.column_names:
             col_values = patient_similarity_array[col_name]
             col_values.sort()
@@ -121,8 +126,17 @@ class GetNullDistribution:
         if num_features in self.num_features_per_patient:
             col_name = str(num_features)
         elif num_features < 1:
-            raise ValueError("Number of features must be greater than 0.")
+            raise ValueError("Samples must have at least 1 phenotypic feature.")
         else:
             col_name = str(min(self.num_features_per_patient, key=lambda x: abs(x - num_features)))
         pval = (self.patient_similarity_array[col_name] >= ic).sum() / len(self.patient_similarity_array)
         return pval
+
+
+class SimilarityWrapper:
+    def __init__(self, kernel: SimilarityKernel, sample: Phenotyped):
+        self.sample = sample
+        self.kernel = kernel
+
+    def compute(self, pts: Sequence[Sample]) -> Sequence[float]:
+        return tuple(self.kernel.compute(pt, self.sample).similarity for pt in pts)
