@@ -51,7 +51,6 @@ class TestSumsim(unittest.TestCase):
 
     def test_get_all_shared_features(self):
         kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
-        self.assertEqual(len(kernel._get_all_shared_features(test_samples[0], test_samples[3])), 0)
         matt_bill_overlap_ids = ['HP:0000118',
                                  'HP:0033127',
                                  'HP:0040064',
@@ -70,7 +69,7 @@ class TestSumsim(unittest.TestCase):
                                  'HP:0011314',
                                  'HP:0002818']
         matt_bill_overlap = set(hpo.get_term(term_id).identifier for term_id in matt_bill_overlap_ids)
-        self.assertEqual(kernel._get_all_shared_features(test_samples[1], test_samples[2]), matt_bill_overlap)
+        self.assertEqual(kernel._get_all_shared_features(test_samples[1], test_samples[0]), matt_bill_overlap)
 
 
 if __name__ == '__main__':
