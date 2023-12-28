@@ -14,14 +14,16 @@ class Benchmark:
     def __init__(self, hpo: hpotk.MinimalOntology, patients: Sequence[Sample], n_iter_distribution: int,
                  num_features_distribution: Sequence[int], mica_dict: typing.Mapping[TermPair, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
-                 root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
+                 root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 chunksize: int = 100):
         self.hpo = hpo
-        self.patients = patients  # TODO: create function to validate patient phenotypic features
+        self.patients = patients
         self.n_iter_distribution = n_iter_distribution
         self.num_features_distribution = num_features_distribution
         self.mica_dict = mica_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
+        self.chunksize = chunksize
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
                                           columns=['num_features'],
                                           data=[len(patient.phenotypic_features) for patient in self.patients])
@@ -54,7 +56,7 @@ class Benchmark:
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
         dist_method = GetNullDistribution(disease, similarity_method, self.hpo, self.n_iter_distribution,
                                           self.num_features_distribution, self.mica_dict, self.delta_ic_dict,
-                                          self.root)
+                                          self.root, self.chunksize)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
         self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)

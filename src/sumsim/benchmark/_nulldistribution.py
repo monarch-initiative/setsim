@@ -67,7 +67,8 @@ class GetNullDistribution:
     def __init__(self, disease: DiseaseModel, method: str, hpo: hpotk.MinimalOntology, num_patients: int,
                  num_features_per_patient: Sequence[int], mic_dict: typing.Mapping[TermPair, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
-                 root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
+                 root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 chunksize: int = 100):
         self.disease = disease
         self.method = method
         self.hpo = hpo
@@ -76,6 +77,7 @@ class GetNullDistribution:
         self.mica_dict = mic_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
+        self.chunksize = chunksize
         self.column_names = [str(col) for col in self.num_features_per_patient]
         self.patient_similarity_array = self._get_null_distribution()
 
@@ -105,7 +107,7 @@ class GetNullDistribution:
         with multiprocessing.Pool(processes=multiprocessing.cpu_count() - 2) as pool:
             similarities = [similarity_list for similarity_list in
                             tqdm(
-                                pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=100),
+                                pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=self.chunksize),
                                 total=self.num_patients)
                             ]
         patient_similarity_array = np.array(similarities, dtype=array_type)

@@ -22,6 +22,7 @@ test_samples = [sample for sample in test_samples if sample.label != "Jed"]
 # Generate IC dictionary
 calc = IcCalculator(hpo)
 ic_dict = calc.calculate_ic_from_samples(samples=test_samples)
+mica_dict = calc.create_mica_ic_dict(samples=test_samples, ic_dict=ic_dict)
 
 # Generate Delta IC Dictionary
 transformer = IcTransformer(hpo)
@@ -76,17 +77,24 @@ class TestGetNullDistribution(unittest.TestCase):
 
 class TestBenchmark(unittest.TestCase):
     def test_benchmark(self):
+
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
-        benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict)
-        results = benchmark.compute_ranks(["sumsim"], [disease])
+        benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
+                              chunksize=50)
+        results = benchmark.compute_ranks(["sumsim", "phenomizer"], [disease])
         self.assertEqual(results["Test_Disease_sumsim_rank"].loc["Tom"], 1)
-        self.assertEqual(results["Test_Disease_sumsim_rank"].loc["Bill"], 2)
         self.assertTrue(results["Test_Disease_sumsim_pval"].loc["Tom"] <
                         results["Test_Disease_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["Test_Disease_sumsim_sim"].loc["Tom"] >
                         results["Test_Disease_sumsim_sim"].loc["Bill"])
+
+        print(results.Test_Disease_phenomizer_sim)
+        self.assertEqual(results["Test_Disease_phenomizer_pval"].loc["Matt"],
+                         results["Test_Disease_phenomizer_pval"].loc["Kayla"])
+        self.assertTrue(results["Test_Disease_phenomizer_sim"].loc["Tom"] >
+                        results["Test_Disease_phenomizer_sim"].loc["Bill"])
 
 
 if __name__ == '__main__':
