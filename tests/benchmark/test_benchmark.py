@@ -16,7 +16,7 @@ fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'))
+test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
 test_samples = [sample for sample in test_samples if sample.label != "Jed"]
 
 # Generate IC dictionary
@@ -65,7 +65,7 @@ class TestGetNullDistribution(unittest.TestCase):
     def test_get_null_distribution(self):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
-        disease = DiseaseModel(disease_id, "Test_Disease", disease_features)
+        disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         number_of_patients = 100
         get_dist = GetNullDistribution(disease, "sumsim", hpo, number_of_patients, [1, 2, 10, 3],
                                        delta_ic_dict=delta_ic_dict)
@@ -78,7 +78,7 @@ class TestBenchmark(unittest.TestCase):
     def test_benchmark(self):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
-        disease = DiseaseModel(disease_id, "Test_Disease", disease_features)
+        disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict)
         results = benchmark.compute_ranks(["sumsim"], [disease])
         self.assertEqual(results["Test_Disease_sumsim_rank"].loc["Tom"], 1)

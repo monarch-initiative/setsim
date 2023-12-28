@@ -17,7 +17,7 @@ fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'))
+test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
 
 
 # The table below shows which terms each sample has:

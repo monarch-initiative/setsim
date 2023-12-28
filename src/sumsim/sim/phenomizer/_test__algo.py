@@ -1,11 +1,18 @@
+import os
 import typing
 import unittest
+
+from pkg_resources import resource_filename
 
 import hpotk
 
 from sumsim.model import Sample
 
 from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimilarityMeasure
+
+test_data = resource_filename(__name__, '../../../../tests/data')
+fpath_hpo = os.path.join(test_data, 'hp.toy.json')
+hpo: hpotk.MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 
 def map_to_phenotypic_features(term_ids) -> typing.Iterable[hpotk.TermId]:
@@ -20,36 +27,39 @@ class PhenomizerTest(unittest.TestCase):
 
     def test_normal_input(self):
         patient_a = Sample(label='A',
-                           # arachnodactyly and portal hypertension
-                           phenotypic_features=map_to_phenotypic_features(("HP:0001166", "HP:0001409")))
+                           #
+                           phenotypic_features=map_to_phenotypic_features(('HP:0004021', 'HP:0004026')),
+                           hpo=hpo)
+        #print(list(patient_a.phenotypic_features))
 
         patient_b = Sample(label='B',
-                           # arachnodactyly, hypertension, and intellectual disability
-                           phenotypic_features=map_to_phenotypic_features(("HP:0001166", "HP:0000822", "HP:0001249")))
+                           #
+                           phenotypic_features=map_to_phenotypic_features(('HP:0004021', 'HP:0003981', 'HP:0003856')),
+                           hpo=hpo)
         similarity = self.phenomizer.compute(patient_a, patient_b)
         self.assertAlmostEqual(similarity.similarity, 5.416666666, delta=1E-9)
 
     def test_empty_returns_zero(self):
-        patient_a = Sample(label='A', phenotypic_features=map_to_phenotypic_features([]))
-        patient_b = Sample(label='B', phenotypic_features=map_to_phenotypic_features([]))
+        patient_a = Sample(label='A', phenotypic_features=map_to_phenotypic_features([]), hpo=hpo)
+        patient_b = Sample(label='B', phenotypic_features=map_to_phenotypic_features([]), hpo=hpo)
         similarity = self.phenomizer.compute(patient_a, patient_b)
         self.assertAlmostEqual(similarity.similarity, 0., delta=1E-9)
 
     @staticmethod
     def _create_mica_dict():
-        arachnodactyly = "HP:0001166"
-        abnormality_of_finger = "HP:0001167"
-        hypertension = "HP:0000822"
-        portal_hypertension = "HP:0001409"
+        lytic_defects_rm = 'HP:0004021'
+        broad_radius = 'HP:0003981'
+        broad_radial_metaph = 'HP:0004026'
+        tubul_bowman_cap = 'HP:0032648'
         # intellectual_disability = "HP:0001249"
         return {
-            TermPair.of(arachnodactyly, arachnodactyly): 10.,
-            TermPair.of(abnormality_of_finger, abnormality_of_finger): 5.,
-            TermPair.of(arachnodactyly, abnormality_of_finger): 5.,
+            TermPair.of(lytic_defects_rm, lytic_defects_rm): 10.,
+            TermPair.of(broad_radius, broad_radius): 3.,
+            TermPair.of(lytic_defects_rm, broad_radius): 2.,
 
-            TermPair.of(hypertension, hypertension): 4.,
-            TermPair.of(portal_hypertension, portal_hypertension): 5.,
-            TermPair.of(hypertension, portal_hypertension): 3.
+            TermPair.of(tubul_bowman_cap, tubul_bowman_cap): 4.,
+            TermPair.of(broad_radial_metaph, broad_radial_metaph): 5.,
+            TermPair.of(broad_radius, broad_radial_metaph): 3.
         }
 
 

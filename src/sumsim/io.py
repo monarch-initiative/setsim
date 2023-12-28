@@ -1,6 +1,8 @@
 import io
 import logging
 import os
+
+import hpotk
 import pandas as pd
 import typing
 
@@ -21,20 +23,21 @@ MESSAGE = typing.TypeVar('MESSAGE', bound=Message)
 logger = logging.getLogger(__name__)
 
 
-def read_phenopacket(phenopacket: typing.Union[Phenopacket, typing.IO, str]) -> Sample:
+def read_phenopacket(phenopacket: typing.Union[Phenopacket, typing.IO, str], hpo: hpotk.GraphAware) -> Sample:
     """
     Read Phenopacket into a `sumsim.model.Sample`.
 
     :param phenopacket: a Phenopacket object, path to a phenopacket JSON file, or an IO wrapper.
+    :param hpo: Ontology to use to remove ancestors
     :return: the parsed `sumsim.model.Sample`.
     :raises: IOError in case of IO issues or a ValueError if the input is not a proper `Phenopacket`
     """
     if not isinstance(phenopacket, Message):
         phenopacket: Phenopacket = read_protobuf_message(phenopacket, Phenopacket())
-    return _parse_phenopacket(phenopacket)
+    return _parse_phenopacket(phenopacket, hpo)
 
 
-def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
+def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sample:
     """
     Extract the relevant parts of a `Phenopacket` into `sumsim.model.Sample`. The function uses `subject.id` for
     the `sample.identifier` and the `type.id` and `excluded` attributes of phenopacket's `PhenotypicFeature`s
@@ -50,16 +53,16 @@ def _parse_phenopacket(phenopacket: Phenopacket) -> Sample:
         if not feature.excluded:
             term_id = TermId.from_curie(feature.type.id)
             phenotypic_features.append(term_id)
-    return Sample(identifier, phenotypic_features)
+    return Sample(identifier, phenotypic_features, hpo)
 
 
-def read_folder(fpath_pp: str) -> Sequence[Sample]:
+def read_folder(fpath_pp: str, hpo: hpotk.GraphAware) -> Sequence[Sample]:
     samples = []
     for filename in os.listdir(fpath_pp):
         if filename.endswith(".json"):
             file_path = os.path.join(fpath_pp, filename)
             if os.path.isfile(file_path):
-                samples.append(read_phenopacket(file_path))
+                samples.append(read_phenopacket(file_path, hpo))
     return samples
 
 
@@ -98,7 +101,7 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
                          f'but received {type(fh)}')
 
 
-def read_gene_to_phenotype(fpath_g2p: str, return_gene2phe: bool = False) \
+def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, return_gene2phe: bool = False) \
         -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
     disease2phe = defaultdict(list)
@@ -110,7 +113,7 @@ def read_gene_to_phenotype(fpath_g2p: str, return_gene2phe: bool = False) \
     diseases = []
     for disease, terms in disease2phe.items():
         list_ids = [TermId.from_curie(term) for term in terms]
-        diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids))
+        diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids, hpo))
     if return_gene2phe:
         return diseases, gene2phe
     return diseases

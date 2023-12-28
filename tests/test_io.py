@@ -15,14 +15,14 @@ class TestIo(unittest.TestCase):
 
     def test_read_phenopacket(self):
         path = os.path.join(data_dir, "test_phenopackets",  "Bill.json")
-        bill = sumsim.io.read_phenopacket(path)
+        bill = sumsim.io.read_phenopacket(path, hpo)
         print(type(bill.phenotypic_features[0]))
         self.assertIsInstance(bill, sumsim.model._base.Sample)
         self.assertEqual((hpo.get_term("HP:0004026").identifier,), bill.phenotypic_features)
 
     def test_read_folder(self):
         path = os.path.join(data_dir, "test_phenopackets")
-        samples = sumsim.io.read_folder(path)
+        samples = sumsim.io.read_folder(path, hpo)
         self.assertEqual(len(samples), 5)
         sample_dict = {sample.label: sample for sample in samples}
         self.assertEqual(len(sample_dict["Tom"].phenotypic_features), 3)
@@ -32,11 +32,10 @@ class TestIo(unittest.TestCase):
 
     def test_read_gene_to_phenotype(self):
         path = os.path.join(data_dir, "MiniG2Ph.txt")
-        diseases = sumsim.io.read_gene_to_phenotype(path)
+        diseases = sumsim.io.read_gene_to_phenotype(path, hpo)
         self.assertEqual(5639, len(diseases))
         test_pfs = {hpo.get_term(i).identifier for i in ['HP:0001257',
                                                          'HP:0001263',
-                                                         'HP:0001276',
                                                          'HP:0001290',
                                                          'HP:0001629',
                                                          'HP:0001638']}
