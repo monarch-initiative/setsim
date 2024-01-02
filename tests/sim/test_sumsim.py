@@ -16,7 +16,19 @@ fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
+temp_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
+test_samples = [None] * 5
+for sample in temp_samples:
+    if sample.label == "Tom":
+        test_samples[0] = sample
+    elif sample.label == "Matt":
+        test_samples[1] = sample
+    elif sample.label == "Bill":
+        test_samples[2] = sample
+    elif sample.label == "Kayla":
+        test_samples[3] = sample
+    elif sample.label == "Jed":
+        test_samples[4] = sample
 
 # Generate IC dictionary
 calc = IcCalculator(hpo)
@@ -69,7 +81,7 @@ class TestSumsim(unittest.TestCase):
                                  'HP:0011314',
                                  'HP:0002818']
         matt_bill_overlap = set(hpo.get_term(term_id).identifier for term_id in matt_bill_overlap_ids)
-        self.assertEqual(kernel._get_all_shared_features(test_samples[1], test_samples[0]), matt_bill_overlap)
+        self.assertEqual(kernel._get_all_shared_features(test_samples[1], test_samples[2]), matt_bill_overlap)
 
 
 if __name__ == '__main__':

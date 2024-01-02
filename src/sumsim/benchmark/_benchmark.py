@@ -7,12 +7,13 @@ import hpotk
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
 from ._nulldistribution import GetNullDistribution
-from sumsim.sim import SumSimSimilarityKernel
+from sumsim.sim import SumSimSimilarityKernel, IcCalculator
 
 
 class Benchmark:
     def __init__(self, hpo: hpotk.MinimalOntology, patients: Sequence[Sample], n_iter_distribution: int,
                  num_features_distribution: Sequence[int], mica_dict: typing.Mapping[TermPair, float] = None,
+                 ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  chunksize: int = 100):
@@ -21,6 +22,7 @@ class Benchmark:
         self.n_iter_distribution = n_iter_distribution
         self.num_features_distribution = num_features_distribution
         self.mica_dict = mica_dict
+        self.ic_dict = ic_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
         self.chunksize = chunksize
@@ -42,21 +44,34 @@ class Benchmark:
             kernel = SumSimSimilarityKernel(self.hpo, self.delta_ic_dict, self.root)
         elif similarity_method == "phenomizer":
             if self.mica_dict is None:
-                raise ValueError("mica_dict must be provided for phenomizer method.")
-            kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
+                if self.ic_dict is None:
+                    raise ValueError("mica_dict or ic_dict must be provided for phenomizer method.")
+                else:
+                    # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
+                    # smaller dictionary for multiprocessing.
+                    calc = IcCalculator(hpo=self.hpo, root=self.root)
+                    # Avoid assigning to self.mica_dict so that mica_dict is always calculated for each disease
+                    mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict, one_sided=True)
+            else:
+                mica_dict = self.mica_dict
+            kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(mica_dict))
         else:
             raise ValueError("Invalid method.")
 
         # Get Column Names
-        sim = f'{disease.label}_{similarity_method}_sim'
-        pval = f'{disease.label}_{similarity_method}_pval'
-        rank = f'{disease.label}_{similarity_method}_rank'
+        if not disease.identifier.value:
+            label = disease.label
+        else:
+            label = disease.identifier.value.replace(':', '_')
+        sim = f'{label}_{similarity_method}_sim'
+        pval = f'{label}_{similarity_method}_pval'
+        rank = f'{label}_{similarity_method}_rank'
 
         # Calculate similarity of each patient to the disease
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
-        dist_method = GetNullDistribution(disease, similarity_method, self.hpo, self.n_iter_distribution,
-                                          self.num_features_distribution, self.mica_dict, self.delta_ic_dict,
-                                          self.root, self.chunksize)
+        dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
+                                          num_features_per_patient=self.num_features_distribution, root=self.root,
+                                          kernel=kernel, chunksize=self.chunksize)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
         self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)

@@ -96,6 +96,31 @@ def import_mica_ic_dict(file_path: str) -> typing.Mapping[TermPair, float]:
     return mica_ic_dict
 
 
+def import_one_sided_mica_ic_dict(file_path: str, disease: DiseaseModel) -> typing.Mapping[TermPair, float]:
+    """
+    Import a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer.
+
+    @param disease: The disease that will be matched to. Only pairs that include one of the features in this disease
+    will be included in the mica dictionary.
+    @param file_path: Path and name for the MICA IC dictionary to be imported.
+    @return: Return a dictionary of TermPairs to MICA IC of that pair.
+    """
+    # Read the CSV file
+    with open(file_path, "r") as csv_file:
+        reader = csv.reader(csv_file, delimiter=",")
+        next(reader)
+        next(reader)
+        header = next(reader)
+        if header[0] != "term_a" or header[1] != "term_b" or header[2] != "ic_mica":
+            raise ValueError("The header of the CSV file does not match the expected format.")
+
+        # Create the dictionary
+        mica_ic_dict = {TermPair.of(row[0], row[1]): float(row[2]) for row in reader
+                        if (hpotk.TermId.from_curie(row[0]) in disease.phenotypic_features or
+                            hpotk.TermId.from_curie(row[1]) in disease.phenotypic_features)}
+    return mica_ic_dict
+
+
 class IcCalculator:
     """
     Create a dictionary providing the information content of terms.
@@ -166,13 +191,15 @@ class IcCalculator:
         return term, ic
 
     def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId] = None,
-                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None) \
+                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None, one_sided: bool = False) \
             -> typing.Mapping[TermPair, float]:
         """
         Create a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer. The
         dictionary requires only the terms that are annotated in the samples being analyzed. (It is not necessary to
         include the parents of terms that are themselves not explicitly annotated in a sample.)
 
+        @param one_sided: If True, only pairs that include one of the features in the disease will be included in the
+        dictionary.
         @param terms_in_samples: This is the set of terms that are included in the sample to be analyzed. Only the
         terminal terms in each sample are necessary to include.
         @param samples: Allows the user to supply a list of Phenotyped sample/diseases that are being analyzed as an
@@ -181,10 +208,10 @@ class IcCalculator:
         instances that already have an ic_dict stored.
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
-        if terms_in_samples is None and samples is None:
-            raise ValueError("Either 'terms_in_samples' or 'samples' must be provided.")
 
         used_terms = self._subontology_terms
+        if terms_in_samples is None and samples is None:
+            terms_in_samples = used_terms
         self._anc_dict = {term: used_terms.intersection(self._hpo.get_ancestors(term, include_source=True)) for term in
                           used_terms}
         if self.ic_dict is None:
@@ -200,16 +227,21 @@ class IcCalculator:
             terms_in_samples = set(feature for sample in samples for feature in sample.phenotypic_features)
         used_terms_list = list(terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                        include_source=True)))
-        term_pairs = itertools.combinations(used_terms_list, 2)
-        total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
+        if one_sided:
+            term_pairs = itertools.product(used_terms_list, self._subontology_terms)
+            term_pairs_2 = itertools.product(used_terms_list, self._subontology_terms)
+            total = len(used_terms_list) * len(self._subontology_terms)
+        else:
+            term_pairs = itertools.combinations(used_terms_list, 2)
+            term_pairs_2 = itertools.combinations(used_terms_list, 2)
+            total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
 
         # Create matched set
-        matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in terms_in_samples}
+        matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in used_terms_list}
 
         # Combine the dictionaries into a single dictionary
-        term_pairs = itertools.combinations(used_terms_list, 2)
-        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs, ic_list) if ic > 0}
+        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
         return {**matched_dict, **mica_dict}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:

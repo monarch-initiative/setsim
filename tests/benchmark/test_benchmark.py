@@ -68,8 +68,8 @@ class TestGetNullDistribution(unittest.TestCase):
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         number_of_patients = 100
-        get_dist = GetNullDistribution(disease, "sumsim", hpo, number_of_patients, [1, 2, 10, 3],
-                                       delta_ic_dict=delta_ic_dict)
+        get_dist = GetNullDistribution(disease, method="sumsim", hpo=hpo, num_patients=number_of_patients,
+                                       num_features_per_patient=[1, 2, 10, 3], delta_ic_dict=delta_ic_dict)
         self.assertEqual(get_dist.get_pval(0, 2), 1.0)
         self.assertEqual(get_dist.get_pval(10, 4), 0.0)
         self.assertEqual(get_dist.get_pval(7, 10), get_dist.get_pval(7, 500))
@@ -84,17 +84,29 @@ class TestBenchmark(unittest.TestCase):
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
                               chunksize=50)
         results = benchmark.compute_ranks(["sumsim", "phenomizer"], [disease])
-        self.assertEqual(results["Test_Disease_sumsim_rank"].loc["Tom"], 1)
-        self.assertTrue(results["Test_Disease_sumsim_pval"].loc["Tom"] <
-                        results["Test_Disease_sumsim_pval"].loc["Bill"])
-        self.assertTrue(results["Test_Disease_sumsim_sim"].loc["Tom"] >
-                        results["Test_Disease_sumsim_sim"].loc["Bill"])
+        self.assertEqual(results["MONDO_1234567_sumsim_rank"].loc["Tom"], 1)
+        self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
+                        results["MONDO_1234567_sumsim_pval"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
+                        results["MONDO_1234567_sumsim_sim"].loc["Bill"])
+        self.assertEqual(results["MONDO_1234567_phenomizer_pval"].loc["Matt"],
+                         results["MONDO_1234567_phenomizer_pval"].loc["Kayla"])
+        self.assertTrue(results["MONDO_1234567_phenomizer_sim"].loc["Tom"] >
+                        results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
 
-        print(results.Test_Disease_phenomizer_sim)
-        self.assertEqual(results["Test_Disease_phenomizer_pval"].loc["Matt"],
-                         results["Test_Disease_phenomizer_pval"].loc["Kayla"])
-        self.assertTrue(results["Test_Disease_phenomizer_sim"].loc["Tom"] >
-                        results["Test_Disease_phenomizer_sim"].loc["Bill"])
+        # Repeat with ic_dict
+        benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
+                              chunksize=50)
+        results = benchmark.compute_ranks(["sumsim", "phenomizer"], [disease])
+        self.assertEqual(results["MONDO_1234567_sumsim_rank"].loc["Tom"], 1)
+        self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
+                        results["MONDO_1234567_sumsim_pval"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
+                        results["MONDO_1234567_sumsim_sim"].loc["Bill"])
+        self.assertEqual(results["MONDO_1234567_phenomizer_pval"].loc["Matt"],
+                         results["MONDO_1234567_phenomizer_pval"].loc["Kayla"])
+        self.assertTrue(results["MONDO_1234567_phenomizer_sim"].loc["Tom"] >
+                        results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
 
 
 if __name__ == '__main__':

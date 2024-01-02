@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 from sumsim.model import Sample, DiseaseModel, Phenotyped
-from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel
+from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 
 
@@ -64,19 +64,24 @@ class PatientGenerator:
 
 class GetNullDistribution:
 
-    def __init__(self, disease: DiseaseModel, method: str, hpo: hpotk.MinimalOntology, num_patients: int,
-                 num_features_per_patient: Sequence[int], mic_dict: typing.Mapping[TermPair, float] = None,
-                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+    def __init__(self, disease: DiseaseModel, hpo: hpotk.MinimalOntology, num_patients: int,
+                 num_features_per_patient: Sequence[int],
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 kernel: SimilarityKernel = None,
+                 method: str = None, mica_dict: typing.Mapping[TermPair, float] = None,
+                 ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  chunksize: int = 100):
         self.disease = disease
         self.method = method
         self.hpo = hpo
         self.num_patients = num_patients
         self.num_features_per_patient = num_features_per_patient
-        self.mica_dict = mic_dict
+        self.mica_dict = mica_dict
+        self.ic_dict = ic_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
+        self.kernel = kernel
         self.chunksize = chunksize
         self.column_names = [str(col) for col in self.num_features_per_patient]
         self.patient_similarity_array = self._get_null_distribution()
@@ -91,16 +96,26 @@ class GetNullDistribution:
         """
 
         # Define similarity kernel
-        if self.method == "sumsim":
-            if self.delta_ic_dict is None:
-                raise ValueError("delta_ic_dict must be provided for sumsim method.")
-            kernel = SumSimSimilarityKernel(self.hpo, self.delta_ic_dict, self.root)
-        elif self.method == "phenomizer":
-            if self.mica_dict is None:
-                raise ValueError("mica_dict must be provided for phenomizer method.")
-            kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
+        if self.kernel is not None:
+            kernel = self.kernel
         else:
-            raise ValueError("Invalid method.")
+            if self.method == "sumsim":
+                if self.delta_ic_dict is None:
+                    raise ValueError("delta_ic_dict must be provided for sumsim method.")
+                kernel = SumSimSimilarityKernel(self.hpo, self.delta_ic_dict, self.root)
+            elif self.method == "phenomizer":
+                if self.mica_dict is None:
+                    if self.ic_dict is None:
+                        raise ValueError("mica_dict or ic_dict must be provided for phenomizer method.")
+                    else:
+                        # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
+                        # smaller dictionary for multiprocessing.
+                        calc = IcCalculator(hpo=self.hpo, root=self.root)
+                        self.mica_dict = calc.create_mica_ic_dict(samples=[self.disease], ic_dict=self.ic_dict,
+                                                                  one_sided=True)
+                kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
+            else:
+                raise ValueError("Invalid method.")
         array_type = [(col, float) for col in self.column_names]
         p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
         kernel_wrapper = SimilarityWrapper(kernel, self.disease)
@@ -108,7 +123,7 @@ class GetNullDistribution:
             similarities = [similarity_list for similarity_list in
                             tqdm(
                                 pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=self.chunksize),
-                                total=self.num_patients)
+                                total=self.num_patients, desc="Calculating null distribution")
                             ]
         patient_similarity_array = np.array(similarities, dtype=array_type)
         for col_name in self.column_names:
