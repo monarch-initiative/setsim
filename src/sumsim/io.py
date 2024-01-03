@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+from warnings import filterwarnings
 
 import hpotk
 import pandas as pd
@@ -56,7 +57,9 @@ def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sampl
     return Sample(identifier, phenotypic_features, hpo)
 
 
-def read_folder(fpath_pp: str, hpo: hpotk.GraphAware) -> Sequence[Sample]:
+def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, verbose: bool = False) -> Sequence[Sample]:
+    if not verbose:
+        filterwarnings("ignore")
     samples = []
     for filename in os.listdir(fpath_pp):
         if filename.endswith(".json"):
@@ -101,8 +104,11 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
                          f'but received {type(fh)}')
 
 
-def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, return_gene2phe: bool = False) \
+def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, return_gene2phe: bool = False,
+                           verbose: bool = False) \
         -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
+    if not verbose:
+        filterwarnings("ignore")
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
     disease2phe = defaultdict(list)
     gene2phe = defaultdict(set)

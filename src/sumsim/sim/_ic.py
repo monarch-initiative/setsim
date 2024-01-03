@@ -127,7 +127,8 @@ class IcCalculator:
     """
 
     def __init__(self, hpo: hpotk.MinimalOntology,
-                 root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
+                 root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 progress_bar: bool = False):
         self._hpo = hpo.graph
         self._hpo_version = hpo.version
         # As a side effect of getting the term and using its identifier,
@@ -143,6 +144,7 @@ class IcCalculator:
         self._phenotyped_array = None
         self.ic_dict = None
         self._anc_dict = None  # used for calculating mica_ic_dict
+        self._progress_bar = progress_bar
 
     def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[hpotk.TermId, float]:
         return self._calculate_ic_from_phenotyped(samples)
@@ -172,9 +174,13 @@ class IcCalculator:
         pool = multiprocessing.Pool(processes=num_processes)
 
         results = []
-        for result in tqdm(pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200),
-                           total=len(self._subontology_terms)):
-            results.append(result)
+        if self._progress_bar:
+            for result in tqdm(pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200),
+                               total=len(self._subontology_terms)):
+                results.append(result)
+        else:
+            for result in pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200):
+                results.append(result)
 
         pool.close()
         self.ic_dict = {key: value for key, value in results}
@@ -283,10 +289,14 @@ class IcCalculator:
 
         # Create a multiprocessing pool
         with multiprocessing.Pool(processes=num_processes) as pool:
-            # Use list comprehension with imap to get the results
-            ic_list = [ic for ic in
-                       tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
-                            desc="Calculating IC of MICA for term pairs")]
+            if self._progress_bar:
+                # Use list comprehension with imap to get the results
+                ic_list = [ic for ic in
+                           tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
+                                desc="Calculating IC of MICA for term pairs")]
+            else:
+                # Use list comprehension with imap to get the results
+                ic_list = [ic for ic in pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6)]
         return ic_list
 
     def _get_mica_ic(self, term_pair: typing.Sequence[hpotk.TermId]) -> float:

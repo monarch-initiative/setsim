@@ -1,8 +1,12 @@
+import multiprocessing
+from warnings import filterwarnings
+
 import pandas as pd
 import typing
 from typing import Sequence
 
 import hpotk
+from tqdm import tqdm
 
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
@@ -16,7 +20,7 @@ class Benchmark:
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
-                 chunksize: int = 100):
+                 chunksize: int = 100, verbose: bool = False):
         self.hpo = hpo
         self.patients = patients
         self.n_iter_distribution = n_iter_distribution
@@ -29,14 +33,25 @@ class Benchmark:
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
                                           columns=['num_features'],
                                           data=[len(patient.phenotypic_features) for patient in self.patients])
+        if not verbose:
+            filterwarnings("ignore")
 
     def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel]):
-        for disease in diseases:
-            for method in similarity_methods:
-                self._rank_patients(method, disease)
+        cpus = multiprocessing.cpu_count() - 2
+        print(f"Using {cpus} CPUs for multiprocessing.")
+        num_diseases = len(diseases)
+        if num_diseases < 6:
+            for disease in diseases:
+                for method in similarity_methods:
+                    self._rank_patients(method, disease, True)
+        else:
+            for disease in tqdm(diseases):
+                for method in similarity_methods:
+                    self._rank_patients(method, disease, False)
+
         return self.patient_table
 
-    def _rank_patients(self, similarity_method: str, disease: DiseaseModel):
+    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, progress_bar: bool):
         # Define similarity kernel
         if similarity_method == "sumsim":
             if self.delta_ic_dict is None:
@@ -71,7 +86,7 @@ class Benchmark:
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=kernel, chunksize=self.chunksize)
+                                          kernel=kernel, chunksize=self.chunksize, progress_bar=progress_bar)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
         self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)
