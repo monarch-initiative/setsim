@@ -36,22 +36,23 @@ class Benchmark:
         if not verbose:
             filterwarnings("ignore")
 
-    def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel]):
-        cpus = multiprocessing.cpu_count() - 2
-        print(f"Using {cpus} CPUs for multiprocessing.")
+    def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel], num_cpus: int = None):
+        if num_cpus is None:
+            num_cpus = max(multiprocessing.cpu_count() - 2, 1)
+        print(f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {num_cpus} CPUs.")
         num_diseases = len(diseases)
         if num_diseases < 6:
             for disease in diseases:
                 for method in similarity_methods:
-                    self._rank_patients(method, disease, True)
+                    self._rank_patients(method, disease, num_cpus, True)
         else:
             for disease in tqdm(diseases):
                 for method in similarity_methods:
-                    self._rank_patients(method, disease, False)
+                    self._rank_patients(method, disease, num_cpus, False)
 
         return self.patient_table
 
-    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, progress_bar: bool):
+    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, num_cpus: int, progress_bar: bool):
         # Define similarity kernel
         if similarity_method == "sumsim":
             if self.delta_ic_dict is None:
@@ -64,7 +65,7 @@ class Benchmark:
                 else:
                     # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
                     # smaller dictionary for multiprocessing.
-                    calc = IcCalculator(hpo=self.hpo, root=self.root)
+                    calc = IcCalculator(hpo=self.hpo, root=self.root, num_processes=num_cpus)
                     # Avoid assigning to self.mica_dict so that mica_dict is always calculated for each disease
                     mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict, one_sided=True)
             else:
@@ -86,7 +87,8 @@ class Benchmark:
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=kernel, chunksize=self.chunksize, progress_bar=progress_bar)
+                                          kernel=kernel, chunksize=self.chunksize, num_cpus=num_cpus,
+                                          progress_bar=progress_bar)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
         self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)

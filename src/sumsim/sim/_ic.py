@@ -128,6 +128,7 @@ class IcCalculator:
 
     def __init__(self, hpo: hpotk.MinimalOntology,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 num_processes: int = None,
                  progress_bar: bool = False):
         self._hpo = hpo.graph
         self._hpo_version = hpo.version
@@ -144,6 +145,9 @@ class IcCalculator:
         self._phenotyped_array = None
         self.ic_dict = None
         self._anc_dict = None  # used for calculating mica_ic_dict
+        if num_processes is None:
+            num_processes = max(multiprocessing.cpu_count() - 2, 1)
+        self._num_processes = num_processes
         self._progress_bar = progress_bar
 
     def calculate_ic_from_samples(self, samples: typing.Sequence[Sample]) -> typing.Mapping[hpotk.TermId, float]:
@@ -168,10 +172,8 @@ class IcCalculator:
             excluded_phenotypes = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
             warnings.warn(f"The sample(s) {excluded_phenotypes} were removed because they have no features.")
         self._phenotyped_array = self._get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
-        # Define the number of processes to use
-        num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
         # Create a multiprocessing pool
-        pool = multiprocessing.Pool(processes=num_processes)
+        pool = multiprocessing.Pool(processes=self._num_processes)
 
         results = []
         if self._progress_bar:
@@ -284,11 +286,8 @@ class IcCalculator:
         return None
 
     def _create_mica_ic_list(self, term_pairs, total) -> typing.Sequence[str]:
-        # Define the number of processes to use
-        num_processes = max(1, multiprocessing.cpu_count() - 2)  # Use all but 2 available CPU cores
-
         # Create a multiprocessing pool
-        with multiprocessing.Pool(processes=num_processes) as pool:
+        with multiprocessing.Pool(processes=self._num_processes) as pool:
             if self._progress_bar:
                 # Use list comprehension with imap to get the results
                 ic_list = [ic for ic in
