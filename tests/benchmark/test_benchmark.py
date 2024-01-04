@@ -84,7 +84,6 @@ class TestBenchmark(unittest.TestCase):
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
                               chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
         results = benchmark.compute_ranks([disease])
-        print(results)
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
