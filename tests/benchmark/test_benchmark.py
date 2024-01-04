@@ -82,7 +82,7 @@ class TestBenchmark(unittest.TestCase):
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
-                              chunksize=50, similarity_methods=["sumsim", "phenomizer", "jaccard"])
+                              chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
         results = benchmark.compute_ranks([disease])
         print(results)
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
@@ -98,7 +98,7 @@ class TestBenchmark(unittest.TestCase):
 
         # Repeat with ic_dict
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
-                              chunksize=50, similarity_methods=["sumsim", "phenomizer", "jaccard"])
+                              chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
         results = benchmark.compute_ranks([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])

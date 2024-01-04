@@ -48,16 +48,13 @@ class Benchmark:
     def compute_ranks(self, diseases: Sequence[DiseaseModel]):
         print(
             f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
-        num_diseases = len(diseases)
         patient_dict = {}
         with multiprocessing.Pool(processes=self.num_cpus) as pool:
-            disease_dicts = [disease_dict for disease_dict in
-                       tqdm(pool.imap(self._rank_across_methods, diseases,
-                                      chunksize=self.chunksize), total=num_diseases)]
-        for result in disease_dicts:
-            patient_dict = {**patient_dict, **result}
-        print(pd.DataFrame(patient_dict, index=self.patient_table.index))
-        self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)], axis=1)
+            disease_dicts = pool.imap(self._rank_across_methods, diseases, chunksize=self.chunksize)
+            for result in tqdm(disease_dicts, total=len(diseases), desc="Diseases"):
+                patient_dict = {**patient_dict, **result}
+        self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)],
+                                       axis=1)
         return self.patient_table
 
     def _rank_across_methods(self, disease: DiseaseModel) -> typing.Mapping[str, typing.List[float]]:
