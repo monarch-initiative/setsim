@@ -50,7 +50,7 @@ class Benchmark:
             f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         patient_dict = {}
         with multiprocessing.Pool(processes=self.num_cpus) as pool:
-            disease_dicts = pool.imap(self._rank_across_methods, diseases, chunksize=self.chunksize)
+            disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
             for result in tqdm(disease_dicts, total=len(diseases), desc="Diseases"):
                 patient_dict = {**patient_dict, **result}
         self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)],
