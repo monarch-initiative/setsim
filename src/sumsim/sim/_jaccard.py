@@ -34,8 +34,9 @@ class JaccardSimilarityKernel(SimilarityKernel):
     :param exact: `True` if the exact matching should be performed.
     """
 
-    def __init__(self, hpo: hpotk.GraphAware, exact: bool = False):
-        self._hpo = hpotk.util.validate_instance(hpo, hpotk.GraphAware, 'hpo')
+    def __init__(self, hpo: hpotk.GraphAware, root: str = "HP:0000118", exact: bool = False):
+        self._hpo = hpo.graph
+        self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
         self._exact = hpotk.util.validate_instance(exact, bool, 'exact')
 
     def compute(self, a: Phenotyped, b: Phenotyped) -> SimilarityResult:
@@ -61,7 +62,7 @@ class JaccardSimilarityKernel(SimilarityKernel):
             if self._exact:
                 terms.add(term_id)
             else:
-                for anc in self._hpo.graph.get_ancestors(term_id, include_source=True):
+                for anc in self._hpo.get_ancestors(term_id, include_source=True):
                     terms.add(anc)
 
-        return terms
+        return terms.intersection(self._features_under_root)

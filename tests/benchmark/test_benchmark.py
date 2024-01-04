@@ -83,8 +83,7 @@ class TestBenchmark(unittest.TestCase):
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
                               chunksize=50)
-        results = benchmark.compute_ranks(["sumsim", "phenomizer"], [disease])
-        self.assertEqual(results["MONDO_1234567_sumsim_rank"].loc["Tom"], 1)
+        results = benchmark.compute_ranks(["sumsim", "phenomizer", "jaccard"], [disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
@@ -93,12 +92,13 @@ class TestBenchmark(unittest.TestCase):
                          results["MONDO_1234567_phenomizer_pval"].loc["Kayla"])
         self.assertTrue(results["MONDO_1234567_phenomizer_sim"].loc["Tom"] >
                         results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_jaccard_sim"].loc["Tom"] >
+                        results["MONDO_1234567_jaccard_sim"].loc["Bill"])
 
         # Repeat with ic_dict
         benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
                               chunksize=50)
         results = benchmark.compute_ranks(["sumsim", "phenomizer"], [disease])
-        self.assertEqual(results["MONDO_1234567_sumsim_rank"].loc["Tom"], 1)
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >

@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 from sumsim.model import Sample, DiseaseModel, Phenotyped
-from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator
+from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 
 
@@ -121,6 +121,8 @@ class GetNullDistribution:
                         self.mica_dict = calc.create_mica_ic_dict(samples=[self.disease], ic_dict=self.ic_dict,
                                                                   one_sided=True)
                 kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
+            elif self.method is "jaccard":
+                kernel = JaccardSimilarityKernel(self.hpo, self.root)
             else:
                 raise ValueError("Invalid method.")
         array_type = [(col, float) for col in self.column_names]

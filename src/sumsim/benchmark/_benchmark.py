@@ -11,7 +11,7 @@ from tqdm import tqdm
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
 from ._nulldistribution import GetNullDistribution
-from sumsim.sim import SumSimSimilarityKernel, IcCalculator
+from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
 class Benchmark:
@@ -30,9 +30,12 @@ class Benchmark:
         self.delta_ic_dict = delta_ic_dict
         self.root = root
         self.chunksize = chunksize
+        data = [(None, len(patient.phenotypic_features)) if patient.disease_identifier is None
+                else (patient.disease_identifier.identifier.value, len(patient.phenotypic_features))
+                for patient in self.patients]
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
-                                          columns=['num_features'],
-                                          data=[len(patient.phenotypic_features) for patient in self.patients])
+                                          columns=['disease_id', 'num_features'],
+                                          data=data)
         if not verbose:
             filterwarnings("ignore")
 
@@ -71,6 +74,8 @@ class Benchmark:
             else:
                 mica_dict = self.mica_dict
             kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(mica_dict))
+        elif similarity_method == "jaccard":
+            kernel = JaccardSimilarityKernel(self.hpo, self.root)
         else:
             raise ValueError("Invalid method.")
 
@@ -81,7 +86,6 @@ class Benchmark:
             label = disease.identifier.value.replace(':', '_')
         sim = f'{label}_{similarity_method}_sim'
         pval = f'{label}_{similarity_method}_pval'
-        rank = f'{label}_{similarity_method}_rank'
 
         # Calculate similarity of each patient to the disease
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
@@ -91,5 +95,4 @@ class Benchmark:
                                           progress_bar=progress_bar)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]
-        self.patient_table[rank] = self.patient_table[pval].rank(method='min', ascending=True)
         pass
