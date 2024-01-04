@@ -17,6 +17,7 @@ from phenopackets import Phenopacket, Cohort
 
 from sumsim.model import Sample, DiseaseModel
 from sumsim.model import DiseaseModel
+from sumsim.model._base import DiseaseIdentifier
 
 # A generic type for a Protobuf message
 MESSAGE = typing.TypeVar('MESSAGE', bound=Message)
@@ -49,12 +50,19 @@ def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sampl
     if not isinstance(phenopacket, Phenopacket):
         raise ValueError(f'Expected an argument with type {Phenopacket} but got {type(phenopacket)}')
     identifier = phenopacket.subject.id
+    interpretations = phenopacket.interpretations
+    if len(interpretations) < 1:
+        diagnosis = None
+    else:
+        diagnosis = DiseaseIdentifier(disease_id=hpotk.TermId.from_curie(interpretations[0].diagnosis.disease.id),
+                                      name=interpretations[0].diagnosis.disease.label)
     phenotypic_features = []
     for feature in phenopacket.phenotypic_features:
         if not feature.excluded:
             term_id = TermId.from_curie(feature.type.id)
             phenotypic_features.append(term_id)
-    return Sample(identifier, phenotypic_features, hpo)
+    return Sample(identifier, phenotypic_features, hpo,
+                  disease_identifier=diagnosis)
 
 
 def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, verbose: bool = False) -> Sequence[Sample]:

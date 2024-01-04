@@ -90,6 +90,9 @@ class GetNullDistribution:
         self.column_names = [str(col) for col in self.num_features_per_patient]
         self.patient_similarity_array = self._get_null_distribution()
 
+    def get_patient_similarity_array(self):
+        return self.patient_similarity_array
+
     def _get_null_distribution(self):
         """Get null distribution.
 
@@ -140,12 +143,12 @@ class GetNullDistribution:
             patient_similarity_array[col_name] = col_values
         return patient_similarity_array
 
-    def get_pval(self, ic: float, num_features: int):
+    def get_pval(self, similarity: float, num_features: int):
         """Get p-value.
 
         Parameters
         ----------
-        @param ic : float
+        @param similarity : float
             Observed similarity.
         @param num_features : int
 
@@ -160,7 +163,7 @@ class GetNullDistribution:
             raise ValueError("Samples must have at least 1 phenotypic feature.")
         else:
             col_name = str(min(self.num_features_per_patient, key=lambda x: abs(x - num_features)))
-        pval = (self.patient_similarity_array[col_name] >= ic).sum() / len(self.patient_similarity_array)
+        pval = (self.patient_similarity_array[col_name] >= similarity).sum() / len(self.patient_similarity_array)
         return pval
 
 
