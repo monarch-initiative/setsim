@@ -48,6 +48,9 @@ class JaccardSimilarityKernel(SimilarityKernel):
 
         intersection = ig_a.intersection(ig_b)
         union = ig_a.union(ig_b)
+        # In case no features exist under root
+        if len(intersection) == 0:
+            return SimilarityResult(0.)
         return SimilarityResult(len(intersection) / len(union))
 
     @property
