@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
-from ._nulldistribution import GetNullDistribution
+from ._nulldistribution import GetNullDistribution, SimilarityWrapper
 from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
@@ -90,7 +90,19 @@ class Benchmark:
         pval = f'{label}_{similarity_method}_pval'
 
         # Calculate similarity of each patient to the disease
-        self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
+        kernel_wrapper = SimilarityWrapper(kernel, disease)
+        with multiprocessing.Pool(self.num_cpus) as pool:
+            if progress_bar:
+                self.patient_table[sim] = [sim for sim in
+                                           tqdm(pool.imap(kernel_wrapper.compute_single,
+                                                          self.patients,
+                                                          chunksize=self.chunksize),
+                                                total=len(self.patients), desc=f"Calculating sample similarity")]
+            else:
+                self.patient_table[sim] = [sim for sim in
+                                           pool.imap(kernel_wrapper.compute_single,
+                                                     self.patients,
+                                                     chunksize=self.chunksize)]
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
                                           kernel=kernel, chunksize=self.chunksize, num_cpus=self.num_cpus,

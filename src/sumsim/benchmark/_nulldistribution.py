@@ -132,12 +132,12 @@ class GetNullDistribution:
             if self.progress_bar:
                 similarities = [similarity_list for similarity_list in
                                 tqdm(
-                                    pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=self.chunksize),
+                                    pool.imap(kernel_wrapper.compute_list, p_gen.generate(), chunksize=self.chunksize),
                                     total=self.num_patients, desc="Calculating null distribution")
                                 ]
             else:
                 similarities = [similarity_list for similarity_list in
-                                pool.imap(kernel_wrapper.compute, p_gen.generate(), chunksize=self.chunksize)]
+                                pool.imap(kernel_wrapper.compute_list, p_gen.generate(), chunksize=self.chunksize)]
         patient_similarity_array = np.array(similarities, dtype=array_type)
         for col_name in self.column_names:
             col_values = patient_similarity_array[col_name]
@@ -174,5 +174,8 @@ class SimilarityWrapper:
         self.sample = sample
         self.kernel = kernel
 
-    def compute(self, pts: Sequence[Sample]) -> Sequence[float]:
+    def compute_list(self, pts: Sequence[Sample]) -> Sequence[float]:
         return tuple(self.kernel.compute(pt, self.sample).similarity for pt in pts)
+
+    def compute_single(self, pt: Sample) -> float:
+        return self.kernel.compute(pt, self.sample).similarity

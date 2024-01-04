@@ -112,11 +112,12 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
                          f'but received {type(fh)}')
 
 
-def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, return_gene2phe: bool = False,
+def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, root: str = "HP:0000118", return_gene2phe: bool = False,
                            verbose: bool = False) \
         -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
     if not verbose:
         filterwarnings("ignore")
+    subontology_terms = set(i.value for i in hpo.graph.get_descendants(root, include_source=True))
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
     disease2phe = defaultdict(list)
     gene2phe = defaultdict(set)
@@ -126,7 +127,7 @@ def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, return_gene2ph
             gene2phe[row['gene_symbol']].add(row['hpo_id'])
     diseases = []
     for disease, terms in disease2phe.items():
-        list_ids = [TermId.from_curie(term) for term in terms]
+        list_ids = [TermId.from_curie(term) for term in terms if term in subontology_terms]
         diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids, hpo))
     if return_gene2phe:
         return diseases, gene2phe
