@@ -128,6 +128,7 @@ class IcCalculator:
 
     def __init__(self, hpo: hpotk.MinimalOntology,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 multiprocess: bool = True,
                  num_processes: int = None,
                  progress_bar: bool = False):
         self._hpo = hpo.graph
@@ -145,6 +146,7 @@ class IcCalculator:
         self._phenotyped_array = None
         self.ic_dict = None
         self._anc_dict = None  # used for calculating mica_ic_dict
+        self.multiprocess = multiprocess
         if num_processes is None:
             num_processes = max(multiprocessing.cpu_count() - 2, 1)
         self._num_processes = num_processes
@@ -286,16 +288,19 @@ class IcCalculator:
         return None
 
     def _create_mica_ic_list(self, term_pairs, total) -> typing.Sequence[str]:
-        # Create a multiprocessing pool
-        with multiprocessing.Pool(processes=self._num_processes) as pool:
-            if self._progress_bar:
-                # Use list comprehension with imap to get the results
-                ic_list = [ic for ic in
-                           tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
-                                desc="Calculating IC of MICA for term pairs")]
-            else:
-                # Use list comprehension with imap to get the results
-                ic_list = [ic for ic in pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6)]
+        if self.multiprocess:
+            # Create a multiprocessing pool
+            with multiprocessing.Pool(processes=self._num_processes) as pool:
+                if self._progress_bar:
+                    # Use list comprehension with imap to get the results
+                    ic_list = [ic for ic in
+                               tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
+                                    desc="Calculating IC of MICA for term pairs")]
+                else:
+                    # Use list comprehension with imap to get the results
+                    ic_list = [ic for ic in pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6)]
+        else:
+            ic_list = [self._get_mica_ic(term_pair) for term_pair in term_pairs]
         return ic_list
 
     def _get_mica_ic(self, term_pair: typing.Sequence[hpotk.TermId]) -> float:

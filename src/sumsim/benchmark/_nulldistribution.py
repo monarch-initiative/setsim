@@ -70,8 +70,7 @@ class GetNullDistribution:
                  kernel: SimilarityKernel = None,
                  method: str = None, mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
-                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
-                 chunksize: int = 100, num_cpus: int = None, progress_bar: bool = False):
+                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None):
         self.disease = disease
         self.method = method
         self.hpo = hpo
@@ -82,11 +81,6 @@ class GetNullDistribution:
         self.delta_ic_dict = delta_ic_dict
         self.root = root
         self.kernel = kernel
-        self.chunksize = chunksize
-        if num_cpus is None:
-            num_cpus = max(multiprocessing.cpu_count() - 2, 1)
-        self.num_cpus = num_cpus
-        self.progress_bar = progress_bar
         self.column_names = [str(col) for col in self.num_features_per_patient]
         self.patient_similarity_array = self._get_null_distribution()
 
@@ -128,16 +122,7 @@ class GetNullDistribution:
         array_type = [(col, float) for col in self.column_names]
         p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
         kernel_wrapper = SimilarityWrapper(kernel, self.disease)
-        with multiprocessing.Pool(processes=self.num_cpus) as pool:
-            if self.progress_bar:
-                similarities = [similarity_list for similarity_list in
-                                tqdm(
-                                    pool.imap(kernel_wrapper.compute_list, p_gen.generate(), chunksize=self.chunksize),
-                                    total=self.num_patients, desc="Calculating null distribution")
-                                ]
-            else:
-                similarities = [similarity_list for similarity_list in
-                                pool.imap(kernel_wrapper.compute_list, p_gen.generate(), chunksize=self.chunksize)]
+        similarities = [kernel_wrapper.compute_list(patient) for patient in p_gen.generate()]
         patient_similarity_array = np.array(similarities, dtype=array_type)
         for col_name in self.column_names:
             col_values = patient_similarity_array[col_name]

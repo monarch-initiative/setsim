@@ -16,12 +16,13 @@ from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKe
 
 class Benchmark:
     def __init__(self, hpo: hpotk.MinimalOntology, patients: Sequence[Sample], n_iter_distribution: int,
-                 num_features_distribution: Sequence[int], mica_dict: typing.Mapping[TermPair, float] = None,
+                 num_features_distribution: Sequence[int], similarity_methods: Sequence[str],
+                 mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  num_cpus: int = None,
-                 chunksize: int = 100, verbose: bool = False):
+                 chunksize: int = 1, verbose: bool = False):
         self.hpo = hpo
         self.patients = patients
         self.n_iter_distribution = n_iter_distribution
@@ -30,6 +31,7 @@ class Benchmark:
         self.ic_dict = ic_dict
         self.delta_ic_dict = delta_ic_dict
         self.root = root
+        self.similarity_methods = similarity_methods
         self.chunksize = chunksize
         if num_cpus is None:
             num_cpus = max(multiprocessing.cpu_count() - 2, 1)
@@ -43,21 +45,28 @@ class Benchmark:
         if not verbose:
             filterwarnings("ignore")
 
-    def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel]):
-        print(f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
+    def compute_ranks(self, diseases: Sequence[DiseaseModel]):
+        print(
+            f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         num_diseases = len(diseases)
-        if num_diseases < 6:
-            for disease in diseases:
-                for method in similarity_methods:
-                    self._rank_patients(method, disease, True)
-        else:
-            for disease in tqdm(diseases):
-                for method in similarity_methods:
-                    self._rank_patients(method, disease, False)
-
+        patient_dict = {}
+        with multiprocessing.Pool(processes=self.num_cpus) as pool:
+            disease_dicts = [disease_dict for disease_dict in
+                       tqdm(pool.imap(self._rank_across_methods, diseases,
+                                      chunksize=self.chunksize), total=num_diseases)]
+        for result in disease_dicts:
+            patient_dict = {**patient_dict, **result}
+        print(pd.DataFrame(patient_dict, index=self.patient_table.index))
+        self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)], axis=1)
         return self.patient_table
 
-    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, progress_bar: bool):
+    def _rank_across_methods(self, disease: DiseaseModel) -> typing.Mapping[str, typing.List[float]]:
+        patient_dict = {}
+        for method in self.similarity_methods:
+            patient_dict = {**patient_dict, **self._rank_patients(method, disease)}
+        return patient_dict
+
+    def _rank_patients(self, similarity_method: str, disease: DiseaseModel):
         # Define similarity kernel
         if similarity_method == "sumsim":
             if self.delta_ic_dict is None:
@@ -70,7 +79,7 @@ class Benchmark:
                 else:
                     # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
                     # smaller dictionary for multiprocessing.
-                    calc = IcCalculator(hpo=self.hpo, root=self.root, num_processes=self.num_cpus)
+                    calc = IcCalculator(hpo=self.hpo, root=self.root, multiprocess=False)
                     # Avoid assigning to self.mica_dict so that mica_dict is always calculated for each disease
                     mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict, one_sided=True)
             else:
@@ -91,22 +100,10 @@ class Benchmark:
 
         # Calculate similarity of each patient to the disease
         kernel_wrapper = SimilarityWrapper(kernel, disease)
-        with multiprocessing.Pool(self.num_cpus) as pool:
-            if progress_bar:
-                self.patient_table[sim] = [sim for sim in
-                                           tqdm(pool.imap(kernel_wrapper.compute_single,
-                                                          self.patients,
-                                                          chunksize=self.chunksize),
-                                                total=len(self.patients), desc=f"Calculating sample similarity")]
-            else:
-                self.patient_table[sim] = [sim for sim in
-                                           pool.imap(kernel_wrapper.compute_single,
-                                                     self.patients,
-                                                     chunksize=self.chunksize)]
+        patient_dict = {sim: [kernel_wrapper.compute_single(patient) for patient in self.patients]}
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=kernel, chunksize=self.chunksize, num_cpus=self.num_cpus,
-                                          progress_bar=progress_bar)
-        self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
-                                    for similarity, patient in zip(self.patient_table[sim], self.patients)]
-        pass
+                                          kernel=kernel)
+        patient_dict[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
+                              for similarity, patient in zip(patient_dict[sim], self.patients)]
+        return patient_dict
