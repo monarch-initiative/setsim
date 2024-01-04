@@ -20,6 +20,7 @@ class Benchmark:
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 num_cpus: int = None,
                  chunksize: int = 100, verbose: bool = False):
         self.hpo = hpo
         self.patients = patients
@@ -30,6 +31,9 @@ class Benchmark:
         self.delta_ic_dict = delta_ic_dict
         self.root = root
         self.chunksize = chunksize
+        if num_cpus is None:
+            num_cpus = max(multiprocessing.cpu_count() - 2, 1)
+        self.num_cpus = num_cpus
         data = [(None, len(patient.phenotypic_features)) if patient.disease_identifier is None
                 else (patient.disease_identifier.identifier.value, len(patient.phenotypic_features))
                 for patient in self.patients]
@@ -39,23 +43,21 @@ class Benchmark:
         if not verbose:
             filterwarnings("ignore")
 
-    def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel], num_cpus: int = None):
-        if num_cpus is None:
-            num_cpus = max(multiprocessing.cpu_count() - 2, 1)
-        print(f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {num_cpus} CPUs.")
+    def compute_ranks(self, similarity_methods: Sequence[str], diseases: Sequence[DiseaseModel]):
+        print(f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         num_diseases = len(diseases)
         if num_diseases < 6:
             for disease in diseases:
                 for method in similarity_methods:
-                    self._rank_patients(method, disease, num_cpus, True)
+                    self._rank_patients(method, disease, True)
         else:
             for disease in tqdm(diseases):
                 for method in similarity_methods:
-                    self._rank_patients(method, disease, num_cpus, False)
+                    self._rank_patients(method, disease, False)
 
         return self.patient_table
 
-    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, num_cpus: int, progress_bar: bool):
+    def _rank_patients(self, similarity_method: str, disease: DiseaseModel, progress_bar: bool):
         # Define similarity kernel
         if similarity_method == "sumsim":
             if self.delta_ic_dict is None:
@@ -68,7 +70,7 @@ class Benchmark:
                 else:
                     # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
                     # smaller dictionary for multiprocessing.
-                    calc = IcCalculator(hpo=self.hpo, root=self.root, num_processes=num_cpus)
+                    calc = IcCalculator(hpo=self.hpo, root=self.root, num_processes=self.num_cpus)
                     # Avoid assigning to self.mica_dict so that mica_dict is always calculated for each disease
                     mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict, one_sided=True)
             else:
@@ -91,7 +93,7 @@ class Benchmark:
         self.patient_table[sim] = [kernel.compute(patient, disease).similarity for patient in self.patients]
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=kernel, chunksize=self.chunksize, num_cpus=num_cpus,
+                                          kernel=kernel, chunksize=self.chunksize, num_cpus=self.num_cpus,
                                           progress_bar=progress_bar)
         self.patient_table[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                                     for similarity, patient in zip(self.patient_table[sim], self.patients)]

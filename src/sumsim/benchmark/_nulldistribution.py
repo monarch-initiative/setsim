@@ -128,7 +128,7 @@ class GetNullDistribution:
         array_type = [(col, float) for col in self.column_names]
         p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
         kernel_wrapper = SimilarityWrapper(kernel, self.disease)
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count() - 2) as pool:
+        with multiprocessing.Pool(processes=self.num_cpus) as pool:
             if self.progress_bar:
                 similarities = [similarity_list for similarity_list in
                                 tqdm(
