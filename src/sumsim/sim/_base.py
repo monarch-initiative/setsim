@@ -1,16 +1,16 @@
 import abc
+import typing
+from abc import ABC
 
 import hpotk
 
 from sumsim.model import Phenotyped
 
 
-
 class SimilarityMeasureResult:
     """
     A container for a result of a :class:`SimilarityMeasure` between a pair of phenotypic features.
     """
-
 
     def __init__(self, similarity: float):
         self._similarity = similarity
@@ -45,7 +45,6 @@ class SimilarityMeasure(metaclass=abc.ABCMeta):
         pass
 
 
-
 class SimilarityResult:
     """
     Container to hold similarity between a pair of :class:`sumsim.model.Phenotyped` entities
@@ -61,7 +60,6 @@ class SimilarityResult:
         Get the `float` with the similarity value.
         """
         return self._sim
-
 
 
 class SimilarityKernel(metaclass=abc.ABCMeta):
@@ -87,3 +85,35 @@ class SimilarityKernel(metaclass=abc.ABCMeta):
         :return: the similarity as a non-negative `float`.
         """
         pass
+
+
+class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
+    """
+    A base class for similarity kernels that calculate similarity by intersecting sets of terms and ancestors.
+    """
+
+    @abc.abstractmethod
+    def _score_shared_features(self, shared_features: typing.Set[hpotk.TermId]) -> float:
+        pass
+
+
+class OntoSetSimilarityKernel(SetSimilarityKernel, metaclass=abc.ABCMeta):
+    """
+    A base class for similarity kernels that find ancestors of terms.
+    """
+
+    def __init__(self, hpo: hpotk.GraphAware, root: str = "HP:0000118", **kwargs):
+        self._hpo = hpo.graph
+        self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
+
+    def _get_all_shared_features(self, a: Phenotyped, b: Phenotyped) -> typing.Set[hpotk.TermId]:
+        a_features = set(ancestor for pf in a.phenotypic_features for ancestor in
+                         self._hpo.get_ancestors(pf, include_source=True))
+        b_features = set(ancestor for pf in b.phenotypic_features for ancestor in
+                         self._hpo.get_ancestors(pf, include_source=True))
+        return a_features.intersection(b_features).intersection(self._features_under_root)
+
+    def compute(self, a: Phenotyped, b: Phenotyped) -> SimilarityResult:
+        shared_features = self._get_all_shared_features(a, b)
+        return SimilarityResult(self._score_shared_features(shared_features))
+

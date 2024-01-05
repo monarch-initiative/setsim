@@ -52,14 +52,14 @@ class TestSumsim(unittest.TestCase):
 
     def test_calculate_total_ic(self):
         kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
-        root_ic = kernel._calculate_total_ic({hpo.get_term("HP:0000118").identifier})
+        root_ic = kernel._score_shared_features({hpo.get_term("HP:0000118").identifier})
         self.assertAlmostEqual(root_ic,0.0, 8)  # add assertion here
         used_terms = ic_dict.keys()
         for term, ic in ic_dict.items():
             term_ancestors = set(hpo.graph.get_ancestors(term, include_source=True)).intersection(used_terms)
-            self.assertLessEqual(ic, kernel._calculate_total_ic(term_ancestors),
+            self.assertLessEqual(ic, kernel._score_shared_features(term_ancestors),
                                  f'\n{term} has an IC of {ic} but the sample has a total IC of '
-                                 f'{kernel._calculate_total_ic(term_ancestors)}.\n Term ancestors: {term_ancestors}')
+                                 f'{kernel._score_shared_features(term_ancestors)}.\n Term ancestors: {term_ancestors}')
 
     def test_get_all_shared_features(self):
         kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
