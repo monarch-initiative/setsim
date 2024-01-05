@@ -69,6 +69,18 @@ class DiseaseIdentifier(hpotk.model.Identified, hpotk.model.Named):
         return str(self)
 
 
+class FastPhenotyped(Phenotyped):
+    """
+    `FastPhenotyped` can be used to speed up the computation of the similarity between two entities.
+    """
+    def __init__(self, phenotypic_features: typing.Iterable[hpotk.TermId]):
+        self._pfs = tuple(phenotypic_features)
+
+    @property
+    def phenotypic_features(self) -> typing.Sequence[hpotk.TermId]:
+        return self._pfs
+
+
 class Sample(Phenotyped, Labeled):
     """
     `Sample` describes the requirements for the subject data, as far as C2S2 is concerned.

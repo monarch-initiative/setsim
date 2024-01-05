@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 from sumsim.model import Sample, DiseaseModel, Phenotyped
+from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 
@@ -30,35 +31,21 @@ class PatientGenerator:
 
     def generate(self):
         for patient_num in range(self.num_patients):
-            yield self._generate_patient(patient_num)
+            yield self._generate_patient()
 
-    def _generate_patient(self, patient_num: int) -> Sequence[Sample]:
+    def _generate_patient(self) -> Sequence[Phenotyped]:
         # Generate random phenotypic features for greatest number of features
-        phenotypic_features = []
-        features_and_ancestors = set()
-        while len(phenotypic_features) < self.max_features:
-            feature = random.choice(self.terms_under_root)
-            if feature in features_and_ancestors:
-                continue
-            feature_ancestors_in_list = set(phenotypic_features) & set(self.hpo.graph.get_ancestors(feature,
-                                                                                              include_source=True))
-            # Replace more general ancestor with more specific feature
-            if bool(feature_ancestors_in_list):
-                for feature_ancestor in feature_ancestors_in_list:
-                    phenotypic_features.remove(feature_ancestor)
-            phenotypic_features.append(feature)
-            features_and_ancestors = features_and_ancestors.union(self.hpo.graph.get_ancestors(feature, include_source=True))
+        features = []
+        while len(features) < self.max_features:
+            features = random.sample(self.terms_under_root, self.max_features + 1)
+            ancestors = set(ancestor for feature in features for ancestor in set(self.hpo.graph.get_ancestors(feature)))
+            for feature in features:
+                if feature in ancestors:
+                    features.remove(feature)
         samples = []
         # Create samples with for each number of phenotypic features
         for num_features in self.num_features_per_patient:
-            if num_features < self.max_features:
-                samples.append(Sample(label=f"Patient_{patient_num}_Phe{num_features}",
-                                      phenotypic_features=phenotypic_features[:num_features],
-                                      hpo=self.hpo))
-            else:
-                samples.append(Sample(label=f"Patient_{patient_num}_Phe{self.max_features}",
-                                      phenotypic_features=phenotypic_features,
-                                      hpo=self.hpo))
+            samples.append(FastPhenotyped(phenotypic_features=features[:num_features]))
         return samples
 
 
@@ -159,8 +146,8 @@ class SimilarityWrapper:
         self.sample = sample
         self.kernel = kernel
 
-    def compute_list(self, pts: Sequence[Sample]) -> Sequence[float]:
+    def compute_list(self, pts: Sequence[Phenotyped]) -> Sequence[float]:
         return tuple(self.kernel.compute(pt, self.sample).similarity for pt in pts)
 
-    def compute_single(self, pt: Sample) -> float:
+    def compute_single(self, pt: Phenotyped) -> float:
         return self.kernel.compute(pt, self.sample).similarity
