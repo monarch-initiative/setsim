@@ -93,7 +93,7 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def _score_shared_features(self, shared_features: typing.Set[hpotk.TermId]) -> float:
+    def _score_feature_sets(self, shared_features: typing.Set[hpotk.TermId]) -> float:
         pass
 
 
@@ -106,14 +106,14 @@ class OntoSetSimilarityKernel(SetSimilarityKernel, metaclass=abc.ABCMeta):
         self._hpo = hpo.graph
         self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
 
-    def _get_all_shared_features(self, a: Phenotyped, b: Phenotyped) -> typing.Set[hpotk.TermId]:
+    def _get_feature_sets(self, a: Phenotyped, b: Phenotyped) -> (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId]):
         a_features = set(ancestor for pf in a.phenotypic_features for ancestor in
-                         self._hpo.get_ancestors(pf, include_source=True))
+                         self._hpo.get_ancestors(pf, include_source=True) if ancestor in self._features_under_root)
         b_features = set(ancestor for pf in b.phenotypic_features for ancestor in
-                         self._hpo.get_ancestors(pf, include_source=True))
-        return a_features.intersection(b_features).intersection(self._features_under_root)
+                         self._hpo.get_ancestors(pf, include_source=True) if ancestor in self._features_under_root)
+        return a_features, b_features
 
     def compute(self, a: Phenotyped, b: Phenotyped) -> SimilarityResult:
-        shared_features = self._get_all_shared_features(a, b)
-        return SimilarityResult(self._score_shared_features(shared_features))
+        feature_sets = self._get_feature_sets(a, b)
+        return SimilarityResult(self._score_feature_sets(feature_sets))
 
