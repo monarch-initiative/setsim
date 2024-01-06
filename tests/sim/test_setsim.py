@@ -10,8 +10,9 @@ from hpotk import MinimalOntology
 import sumsim
 from sumsim.model import Sample
 from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SumSimSimilarityKernel
+from sumsim.sim import SumSimSimilarityKernel, JaccardSimilarityKernel
 from sumsim.sim import IcCalculator, IcTransformer
+from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._sumsim import SumSimSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
@@ -96,6 +97,17 @@ class TestSumsim(unittest.TestCase):
         similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
                               sample_iteration]
         similarities_kernel = SumSimSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
+        similarities_result = [i.similarity for i in similarities_kernel.compute(test_samples[0])]
+        self.assertEqual(similarity_results, similarities_result)
+
+    def test_jaccardsimilarities(self):
+        similarity_kernel = JaccardSimilarityKernel(hpo)
+        toms_features = test_samples[0].phenotypic_features
+        sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
+                            for i in range(1, len(toms_features) + 1)]
+        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+                              sample_iteration]
+        similarities_kernel = JaccardSimilaritiesKernel(disease=test_samples[3], hpo=hpo)
         similarities_result = [i.similarity for i in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
 

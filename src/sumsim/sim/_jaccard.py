@@ -3,11 +3,13 @@ import re
 import typing
 
 from collections import namedtuple
+from typing import Set
 
 import hpotk
 
 from sumsim.model import Phenotyped
-from ._base import SimilarityKernel, SimilarityResult, SetSimilarityKernel, OntoSetSimilarityKernel
+from ._base import SimilarityKernel, SimilarityResult, SetSimilarityKernel, OntoSetSimilarityKernel, \
+    SetSimilaritiesKernel
 
 HPO_PATTERN = re.compile(r"HP:(?P<ID>\d{7})")
 
@@ -55,3 +57,31 @@ class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity):
     def is_symmetric(self) -> bool:
         # Yes, it is!
         return True
+
+
+class JaccardSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
+    def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
+        SetSimilaritiesKernel.__init__(self, disease, hpo, root)
+
+    @staticmethod
+    def _intersection_addition(new_feature_set: Set[hpotk.TermId], disease_leftovers: Set[hpotk.TermId]) \
+            -> (float, Set[hpotk.TermId]):
+        additional_intersection_set = new_feature_set.intersection(disease_leftovers)
+        return len(additional_intersection_set), disease_leftovers.difference(additional_intersection_set)
+
+    def _next_union(self, new_feature_set: Set[hpotk.TermId], current_union_set: Set[hpotk.TermId]) \
+            -> (float, Set[hpotk.TermId]):
+        next_union = new_feature_set.union(current_union_set).intersection(self._features_under_root)
+        return len(next_union), next_union
+
+    def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
+        disease_leftovers = self._disease_features.copy()
+        union_set = disease_leftovers.copy()
+        intersection = 0.0
+        results = []
+        for next_set in self._sample_iterator(sample):
+            intersection_addition, disease_leftovers = self._intersection_addition(next_set, disease_leftovers)
+            intersection += intersection_addition
+            union, union_set = self._next_union(next_set, union_set)
+            results.append(SimilarityResult(intersection / union))
+        return results
