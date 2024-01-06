@@ -117,3 +117,27 @@ class OntoSetSimilarityKernel(SetSimilarityKernel, metaclass=abc.ABCMeta):
         feature_sets = self._get_feature_sets(a, b)
         return SimilarityResult(self._score_feature_sets(feature_sets))
 
+
+class SimilaritiesKernel(metaclass=abc.ABCMeta):
+    def __init__(self, disease: Phenotyped):
+        self._disease = disease
+
+    @abc.abstractmethod
+    def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
+        pass
+
+
+class SetSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
+    def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
+        SimilaritiesKernel.__init__(self, disease)
+        self._hpo = hpo.graph
+        self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
+        self._disease_features = set(ancestor for pf in disease.phenotypic_features for ancestor in
+                                     self._hpo.get_ancestors(pf, include_source=True) if
+                                     ancestor in self._features_under_root)
+
+    def _sample_iterator(self, sample: Phenotyped) -> typing.Iterable[typing.Set[hpotk.TermId]]:
+        for pf in sample.phenotypic_features:
+            # Samples may include terms that are not under root since this set is intersecting with disease features.
+            yield set(ancestor for ancestor in self._hpo.get_ancestors(pf, include_source=True))
+
