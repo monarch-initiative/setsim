@@ -143,17 +143,18 @@ class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
 
     @staticmethod
     def _sample_iterator(sample: Phenotyped) -> typing.Iterable[hpotk.TermId]:
-        yield sample.phenotypic_features
+        for term in sample.phenotypic_features:
+            yield term
 
     def _term_similarity(self, a: hpotk.TermId) -> float:
-        return max(self._mica_dict.get(TermPair.of(pf, a)) for pf in self._disease.phenotypic_features)
+        return max(self._mica_dict.get(TermPair.of(pf, a), 0) for pf in self._disease.phenotypic_features)
 
     def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
         sim = 0.0
         i = 0
         results = []
         for next_term in self._sample_iterator(sample):
-            sim += (self._term_similarity(next_term) + sim * i) / (i + 1)
+            sim = (self._term_similarity(next_term) + sim * i) / (i + 1)
             i += 1
             results.append(SimilarityResult(sim))
         return results
