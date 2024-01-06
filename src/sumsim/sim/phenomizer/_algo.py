@@ -6,7 +6,7 @@ import hpotk
 
 from sumsim.model import Phenotyped
 
-from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult
+from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult, SimilaritiesKernel
 from ._io import TermPair
 
 
@@ -134,3 +134,26 @@ class PhenomizerSimilarityKernel(BasePhenomizerSimilarityKernel):
         max_b = np.max(similarities, axis=0)
         mean_b = max_b.mean()
         return SimilarityResult((mean_a + mean_b) * .5)
+
+
+class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
+    def __init__(self, disease: Phenotyped, mica_dict: typing.Mapping[TermPair, float]):
+        SimilaritiesKernel.__init__(self, disease)
+        self._mica_dict = mica_dict
+
+    @staticmethod
+    def _sample_iterator(sample: Phenotyped) -> typing.Iterable[hpotk.TermId]:
+        yield sample.phenotypic_features
+
+    def _term_similarity(self, a: hpotk.TermId) -> float:
+        return max(self._mica_dict.get(TermPair.of(pf, a)) for pf in self._disease.phenotypic_features)
+
+    def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
+        sim = 0.0
+        i = 0
+        results = []
+        for next_term in self._sample_iterator(sample):
+            sim += (self._term_similarity(next_term) + sim * i) / (i + 1)
+            i += 1
+            results.append(SimilarityResult(sim))
+        return results

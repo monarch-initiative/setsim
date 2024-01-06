@@ -112,5 +112,6 @@ class TestSumsim(unittest.TestCase):
         self.assertEqual(similarity_results, similarities_result)
 
 
+
 if __name__ == '__main__':
     unittest.main()
