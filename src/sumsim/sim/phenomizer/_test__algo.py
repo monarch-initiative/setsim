@@ -60,7 +60,7 @@ class PhenomizerTest(unittest.TestCase):
         similarity_results = [similarity_kernel.compute(s_iter, disease).similarity for s_iter in
                               sample_iteration]
         similarities_kernel = PhenomizerSimilaritiesKernel(disease=disease, mica_dict=mica_dict)
-        similarities_result = [i.similarity for i in similarities_kernel.compute(sample)]
+        similarities_result = similarities_kernel.compute(sample)
         self.assertEqual(similarity_results, similarities_result)
 
     @staticmethod

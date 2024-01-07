@@ -62,13 +62,13 @@ class SumSimSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
             raise
         return sim, disease_leftovers.difference(all_features)
 
-    def compute(self, sample: Phenotyped) -> typing.Iterable[SimilarityResult]:
+    def compute(self, sample: Phenotyped) -> typing.Iterable[float]:
         disease_leftovers = self._disease_features.copy()
         sim = 0.0
         results = []
         for next_set in self._sample_iterator(sample):
             sim_addition, disease_leftovers = self._score_addition(next_set, disease_leftovers)
             sim += sim_addition
-            results.append(SimilarityResult(sim))
+            results.append(sim)
         return results
 

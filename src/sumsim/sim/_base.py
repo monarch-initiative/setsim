@@ -123,7 +123,7 @@ class SimilaritiesKernel(metaclass=abc.ABCMeta):
         self._disease = disease
 
     @abc.abstractmethod
-    def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
+    def compute(self, sample: Phenotyped) -> typing.Sequence[float]:
         pass
 
 

@@ -37,31 +37,6 @@ delta_ic_dict = transformer.transform(ic_dict, strategy="max")
 # Kayla       False        True       False       False
 
 
-class TestPatientGenerator(unittest.TestCase):
-    def test_generation(self):
-        number_of_patients = 10
-        p_gen = PatientGenerator(hpo, number_of_patients, [1, 2, 10, 3])
-        list1 = []
-        list2 = []
-        list3 = []
-        list10 = []
-        for patient in p_gen.generate():
-            [p1, p2, p10, p3] = patient
-            self.assertEqual(len(p1.phenotypic_features), 1)
-            self.assertEqual(len(p2.phenotypic_features), 2)
-            self.assertEqual(len(p3.phenotypic_features), 3)
-            self.assertEqual(len(p10.phenotypic_features), 10)
-            list1.append(p1)
-            list2.append(p2)
-            list3.append(p3)
-            list10.append(p10)
-
-        self.assertEqual(len(list1), number_of_patients)
-        self.assertEqual(len(list2), number_of_patients)
-        self.assertEqual(len(list3), number_of_patients)
-        self.assertEqual(len(list10), number_of_patients)
-
-
 class TestGetNullDistribution(unittest.TestCase):
     def test_get_null_distribution(self):
         disease_id = TermId.from_curie("MONDO:1234567")
@@ -69,7 +44,7 @@ class TestGetNullDistribution(unittest.TestCase):
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         number_of_patients = 100
         get_dist = GetNullDistribution(disease, method="sumsim", hpo=hpo, num_patients=number_of_patients,
-                                       num_features_per_patient=[1, 2, 10, 3], delta_ic_dict=delta_ic_dict)
+                                       num_features_per_patient=10, delta_ic_dict=delta_ic_dict)
         self.assertEqual(get_dist.get_pval(0, 2), 1.0)
         self.assertEqual(get_dist.get_pval(10, 4), 0.0)
         self.assertEqual(get_dist.get_pval(7, 10), get_dist.get_pval(7, 500))
@@ -77,11 +52,10 @@ class TestGetNullDistribution(unittest.TestCase):
 
 class TestBenchmark(unittest.TestCase):
     def test_benchmark(self):
-
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
-        benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
+        benchmark = Benchmark(hpo, test_samples, 100, 10, delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
                               chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
         results = benchmark.compute_ranks([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
@@ -96,7 +70,7 @@ class TestBenchmark(unittest.TestCase):
                         results["MONDO_1234567_jaccard_sim"].loc["Bill"])
 
         # Repeat with ic_dict
-        benchmark = Benchmark(hpo, test_samples, 100, [1, 2, 10, 3], delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
+        benchmark = Benchmark(hpo, test_samples, 100, 10, delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
                               chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
         results = benchmark.compute_ranks([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <

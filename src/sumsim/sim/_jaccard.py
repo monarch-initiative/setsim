@@ -74,7 +74,7 @@ class JaccardSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
         next_union = new_feature_set.union(current_union_set).intersection(self._features_under_root)
         return len(next_union), next_union
 
-    def compute(self, sample: Phenotyped) -> typing.Sequence[SimilarityResult]:
+    def compute(self, sample: Phenotyped) -> typing.Sequence[float]:
         disease_leftovers = self._disease_features.copy()
         union_set = disease_leftovers.copy()
         intersection = 0.0
@@ -83,5 +83,5 @@ class JaccardSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
             intersection_addition, disease_leftovers = self._intersection_addition(next_set, disease_leftovers)
             intersection += intersection_addition
             union, union_set = self._next_union(next_set, union_set)
-            results.append(SimilarityResult(intersection / union))
+            results.append(intersection / union)
         return results

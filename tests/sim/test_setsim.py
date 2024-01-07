@@ -97,7 +97,7 @@ class TestSumsim(unittest.TestCase):
         similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
                               sample_iteration]
         similarities_kernel = SumSimSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
-        similarities_result = [i.similarity for i in similarities_kernel.compute(test_samples[0])]
+        similarities_result = similarities_kernel.compute(test_samples[0])
         self.assertEqual(similarity_results, similarities_result)
 
     def test_jaccardsimilarities(self):
@@ -108,7 +108,7 @@ class TestSumsim(unittest.TestCase):
         similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
                               sample_iteration]
         similarities_kernel = JaccardSimilaritiesKernel(disease=test_samples[3], hpo=hpo)
-        similarities_result = [i.similarity for i in similarities_kernel.compute(test_samples[0])]
+        similarities_result = similarities_kernel.compute(test_samples[0])
         self.assertEqual(similarity_results, similarities_result)
 
 
