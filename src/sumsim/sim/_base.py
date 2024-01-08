@@ -123,7 +123,7 @@ class SimilaritiesKernel(metaclass=abc.ABCMeta):
         self._disease = disease
 
     @abc.abstractmethod
-    def compute(self, sample: Phenotyped) -> typing.Sequence[float]:
+    def compute(self, sample: Phenotyped, return_last_result: bool = False) -> typing.Union[typing.Sequence[float], float]:
         pass
 
 
@@ -132,12 +132,14 @@ class SetSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
         SimilaritiesKernel.__init__(self, disease)
         self._hpo = hpo.graph
         self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
+        self._ancestor_dict = {feature: set(anc for anc in self._hpo.get_ancestors(feature, include_source=True)
+                                            if anc in self._features_under_root)
+                               for feature in self._features_under_root}
         self._disease_features = set(ancestor for pf in disease.phenotypic_features for ancestor in
-                                     self._hpo.get_ancestors(pf, include_source=True) if
-                                     ancestor in self._features_under_root)
+                                     self._ancestor_dict[pf] if pf in self._features_under_root)
 
     def _sample_iterator(self, sample: Phenotyped) -> typing.Iterable[typing.Set[hpotk.TermId]]:
         for pf in sample.phenotypic_features:
             # Samples may include terms that are not under root since this set is intersecting with disease features.
-            yield set(ancestor for ancestor in self._hpo.get_ancestors(pf, include_source=True))
+            yield self._ancestor_dict.get(pf, set())
 

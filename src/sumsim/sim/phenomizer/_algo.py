@@ -4,6 +4,8 @@ import typing
 import numpy as np
 import hpotk
 
+from typing import Mapping
+
 from sumsim.model import Phenotyped
 
 from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult, SimilaritiesKernel
@@ -137,9 +139,13 @@ class PhenomizerSimilarityKernel(BasePhenomizerSimilarityKernel):
 
 
 class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
-    def __init__(self, disease: Phenotyped, mica_dict: typing.Mapping[TermPair, float]):
+    def __init__(self, disease: Phenotyped,
+                 mica_dict: typing.Union[Mapping[TermPair, float], Mapping[typing.Tuple[int, int], float]],
+                 use_fragile_mica_dict: bool = False,
+                 return_last_result: bool = False):
         SimilaritiesKernel.__init__(self, disease)
         self._mica_dict = mica_dict
+        self._use_fragile_mica_dict = use_fragile_mica_dict
 
     @staticmethod
     def _sample_iterator(sample: Phenotyped) -> typing.Iterable[hpotk.TermId]:
@@ -148,9 +154,11 @@ class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
 
     def _term_similarity(self, a: hpotk.TermId) -> float:
         a_as_int = int(a.id)
+        if self._use_fragile_mica_dict:
+            return max(self._mica_dict.get((int(pf.id), a_as_int), 0) for pf in self._disease.phenotypic_features)
         return max(self._mica_dict.get(TermPair(int(pf.id), a_as_int), 0) for pf in self._disease.phenotypic_features)
 
-    def compute(self, sample: Phenotyped) -> typing.Sequence[float]:
+    def compute(self, sample: Phenotyped, return_last_result: bool = False) -> typing.Union[typing.Sequence[float], float]:
         sim = 0.0
         i = 0
         results = []
@@ -158,4 +166,6 @@ class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
             sim = (self._term_similarity(next_term) + sim * i) / (i + 1)
             i += 1
             results.append(sim)
+        if return_last_result:
+            return sim
         return results

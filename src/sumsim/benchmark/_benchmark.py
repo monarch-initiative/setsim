@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from sumsim.model import DiseaseModel, Sample
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
-from ._nulldistribution import GetNullDistribution, KernelIterator
+from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGenerator
 from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
@@ -42,6 +42,8 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
                                           columns=['disease_id', 'num_features'],
                                           data=data)
+        p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root)
+        self.precomputed_patients = [patient for patient in p_gen.generate()]
         if not verbose:
             filterwarnings("ignore")
 
@@ -68,8 +70,7 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         return patient_dict
 
     def _rank_patients(self, similarity_method: str, disease: DiseaseModel):
-        multiple_features_kernel = self._define_kernel(disease, similarity_method)
-        single_kernel = self._define_kernel(disease, similarity_method, single_feature_version=True)
+        kernel = self._define_kernel(disease, similarity_method)
         # Get Column Names
         if not disease.identifier.value:
             label = disease.label
@@ -77,12 +78,11 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
             label = disease.identifier.value.replace(':', '_')
         sim = f'{label}_{similarity_method}_sim'
         pval = f'{label}_{similarity_method}_pval'
-
         # Calculate similarity of each patient to the disease
-        patient_dict = {sim: [single_kernel.compute(patient, disease).similarity for patient in self.patients]}
+        patient_dict = {sim: [kernel.compute(patient, return_last_result=True) for patient in self.patients]}
         dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
                                           num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=multiple_features_kernel)
+                                          kernel=kernel, precomputed_patients=self.precomputed_patients)
         patient_dict[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
                               for similarity, patient in zip(patient_dict[sim], self.patients)]
         return patient_dict

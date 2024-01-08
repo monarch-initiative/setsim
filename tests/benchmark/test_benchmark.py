@@ -8,8 +8,10 @@ from pkg_resources import resource_filename
 
 import sumsim
 from sumsim.benchmark import PatientGenerator, Benchmark, GetNullDistribution
+from sumsim.benchmark._nulldistribution import KernelIterator
 from sumsim.model import DiseaseModel
 from sumsim.sim import IcCalculator, IcTransformer
+from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -48,6 +50,18 @@ class TestGetNullDistribution(unittest.TestCase):
         self.assertEqual(get_dist.get_pval(0, 2), 1.0)
         self.assertEqual(get_dist.get_pval(10, 4), 0.0)
         self.assertEqual(get_dist.get_pval(7, 10), get_dist.get_pval(7, 500))
+
+
+class TestFragileMicaKernel(unittest.TestCase):
+    def test_fragile_mica_kernel(self):
+        disease_id = TermId.from_curie("MONDO:1234567")
+        disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
+        disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
+        kernel_generator = KernelIterator(hpo, mica_dict=mica_dict, root="HP:0000118")
+        fragile_phenomizer = kernel_generator._define_kernel(disease, "phenomizer")
+        phenomizer = PhenomizerSimilaritiesKernel(disease, mica_dict=mica_dict, use_fragile_mica_dict=False)
+        for sample in test_samples:
+            self.assertEqual(fragile_phenomizer.compute(sample), phenomizer.compute(sample))
 
 
 class TestBenchmark(unittest.TestCase):

@@ -85,7 +85,8 @@ class KernelIterator:
             if single_feature_version:
                 kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(temp_mica_dict))
             else:
-                kernel = PhenomizerSimilaritiesKernel(disease, temp_mica_dict)
+                fragile_mica_dict = self._make_fragile_mica_ic(disease, temp_mica_dict)
+                kernel = PhenomizerSimilaritiesKernel(disease, fragile_mica_dict, use_fragile_mica_dict=True)
         elif method == "jaccard":
             if single_feature_version:
                 kernel = JaccardSimilarityKernel(self.hpo, self.root)
@@ -94,6 +95,15 @@ class KernelIterator:
         else:
             raise ValueError("Invalid method.")
         return kernel
+
+    def _make_fragile_mica_ic(self, disease, mica_dict):
+        features_under_root = set(self.hpo.graph.get_descendants(self.root, include_source=True))
+        disease_features = set(int(feature.id) for feature in disease.phenotypic_features)
+        # Create fragile dictionary that avoids creating TermPair objects by using integers and always putting integers
+        # for the disease on the left of the tuple
+        fragile_dict = {(d_f, int(a.id)): mica_dict.get(TermPair(d_f, int(a.id)), 0.0)
+                        for a in features_under_root for d_f in disease_features}
+        return fragile_dict
 
 
 class GetNullDistribution(KernelIterator, metaclass=abc.ABCMeta):
@@ -104,19 +114,21 @@ class GetNullDistribution(KernelIterator, metaclass=abc.ABCMeta):
                  kernel: SimilarityKernel = None,
                  method: str = None, mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
-                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None):
+                 delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+                 precomputed_patients: Sequence[Phenotyped] = None):
         KernelIterator.__init__(self, hpo, ic_dict, delta_ic_dict, mica_dict, root)
         self.disease = disease
         self.method = method
         self.num_patients = num_patients
         self.num_features_per_patient = num_features_per_patient
         self.kernel = kernel
+        self.precomputed_patients = precomputed_patients
         self.patient_similarity_array = self._get_null_distribution()
 
     def get_patient_similarity_array(self):
         return self.patient_similarity_array
 
-    def _get_null_distribution(self):
+    def _get_null_distribution(self, ):
         """Get null distribution.
 
         Returns
@@ -130,8 +142,11 @@ class GetNullDistribution(KernelIterator, metaclass=abc.ABCMeta):
             kernel = self.kernel
         else:
             kernel = self._define_kernel(self.disease, self.method)
-        p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
-        patient_similarity_array = np.array([kernel.compute(patient) for patient in p_gen.generate()])
+        if self.precomputed_patients is None:
+            p_gen = PatientGenerator(self.hpo, self.num_patients, self.num_features_per_patient, self.root)
+            patient_similarity_array = np.array([kernel.compute(patient) for patient in p_gen.generate()])
+        else:
+            patient_similarity_array = np.array([kernel.compute(patient) for patient in self.precomputed_patients])
         return patient_similarity_array
 
     def get_pval(self, similarity: float, num_features: int):

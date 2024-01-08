@@ -46,7 +46,7 @@ class SumSimSimilarityKernel(OntoSetSimilarityKernel, SumSimilarity):
 
 class SumSimSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, delta_ic_dict: typing.Mapping[hpotk.TermId, float],
-                 root: str = "HP:0000118"):
+                 root: str = "HP:0000118", return_last_result: bool = False):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)
         self._delta_ic_dict = delta_ic_dict
 
@@ -62,7 +62,7 @@ class SumSimSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
             raise
         return sim, disease_leftovers.difference(all_features)
 
-    def compute(self, sample: Phenotyped) -> typing.Iterable[float]:
+    def compute(self, sample: Phenotyped, return_last_result: bool = False) -> typing.Union[typing.Sequence[float], float]:
         disease_leftovers = self._disease_features.copy()
         sim = 0.0
         results = []
@@ -70,5 +70,7 @@ class SumSimSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
             sim_addition, disease_leftovers = self._score_addition(next_set, disease_leftovers)
             sim += sim_addition
             results.append(sim)
+        if return_last_result:
+            return sim
         return results
 
