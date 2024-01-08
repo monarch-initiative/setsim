@@ -22,6 +22,7 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 multiprocess: bool = True,
                  num_cpus: int = None,
                  chunksize: int = 1, verbose: bool = False):
         KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, delta_ic_dict=delta_ic_dict,
@@ -31,6 +32,7 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         self.num_features_distribution = num_features_distribution
         self.similarity_methods = similarity_methods
         self.chunksize = chunksize
+        self.multiprocess = multiprocess
         if num_cpus is None:
             num_cpus = max(multiprocessing.cpu_count() - 2, 1)
         self.num_cpus = num_cpus
@@ -47,10 +49,14 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         print(
             f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         patient_dict = {}
-        with multiprocessing.Pool(processes=self.num_cpus) as pool:
-            disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
-            for result in tqdm(disease_dicts, total=len(diseases), desc="Diseases"):
-                patient_dict = {**patient_dict, **result}
+        if self.multiprocess:
+            with multiprocessing.Pool(processes=self.num_cpus) as pool:
+                disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
+                for result in tqdm(disease_dicts, total=len(diseases), desc="Diseases"):
+                    patient_dict = {**patient_dict, **result}
+        else:
+            for disease in tqdm(diseases, total=len(diseases), desc="Diseases"):
+                patient_dict = {**patient_dict, **self._rank_across_methods(disease)}
         self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)],
                                        axis=1)
         return self.patient_table

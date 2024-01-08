@@ -147,7 +147,8 @@ class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
             yield term
 
     def _term_similarity(self, a: hpotk.TermId) -> float:
-        return max(self._mica_dict.get(TermPair.of(pf, a), 0) for pf in self._disease.phenotypic_features)
+        a_as_int = int(a.id)
+        return max(self._mica_dict.get(TermPair(int(pf.id), a_as_int), 0) for pf in self._disease.phenotypic_features)
 
     def compute(self, sample: Phenotyped) -> typing.Sequence[float]:
         sim = 0.0

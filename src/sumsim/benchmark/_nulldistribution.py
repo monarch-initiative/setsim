@@ -78,12 +78,14 @@ class KernelIterator:
                     # This allows for dynamic calculation of mica dictionary using one-sided method, resulting in
                     # smaller dictionary for multiprocessing.
                     calc = IcCalculator(hpo=self.hpo, root=self.root, multiprocess=False)
-                    self.mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict,
+                    temp_mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict,
                                                               one_sided=True)
-            if single_feature_version:
-                kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(self.mica_dict))
             else:
-                kernel = PhenomizerSimilaritiesKernel(disease, self.mica_dict)
+                temp_mica_dict = self.mica_dict
+            if single_feature_version:
+                kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(temp_mica_dict))
+            else:
+                kernel = PhenomizerSimilaritiesKernel(disease, temp_mica_dict)
         elif method == "jaccard":
             if single_feature_version:
                 kernel = JaccardSimilarityKernel(self.hpo, self.root)
