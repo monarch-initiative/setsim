@@ -61,15 +61,12 @@ class KernelIterator:
         self.delta_ic_dict = delta_ic_dict
         self.mica_dict = mica_dict
 
-    def _define_kernel(self, disease, method, single_feature_version=False) \
+    def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
         if method == "sumsim":
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
-            if single_feature_version:
-                kernel = SumSimSimilarityKernel(self.hpo, self.delta_ic_dict, self.root)
-            else:
-                kernel = SumSimSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+            kernel = SumSimSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
         elif method == "phenomizer":
             if self.mica_dict is None:
                 if self.ic_dict is None:
@@ -79,19 +76,12 @@ class KernelIterator:
                     # smaller dictionary for multiprocessing.
                     calc = IcCalculator(hpo=self.hpo, root=self.root, multiprocess=False)
                     temp_mica_dict = calc.create_mica_ic_dict(samples=[disease], ic_dict=self.ic_dict,
-                                                              one_sided=True)
+                                                              one_sided=True, fragile_dict=True)
             else:
-                temp_mica_dict = self.mica_dict
-            if single_feature_version:
-                kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(temp_mica_dict))
-            else:
-                fragile_mica_dict = self._make_fragile_mica_ic(disease, temp_mica_dict)
-                kernel = PhenomizerSimilaritiesKernel(disease, fragile_mica_dict, use_fragile_mica_dict=True)
+                temp_mica_dict = self._make_fragile_mica_ic(disease, self.mica_dict)
+            kernel = PhenomizerSimilaritiesKernel(disease, temp_mica_dict, use_fragile_mica_dict=True)
         elif method == "jaccard":
-            if single_feature_version:
-                kernel = JaccardSimilarityKernel(self.hpo, self.root)
-            else:
-                kernel = JaccardSimilaritiesKernel(disease, self.hpo, self.root)
+            kernel = JaccardSimilaritiesKernel(disease, self.hpo, self.root)
         else:
             raise ValueError("Invalid method.")
         return kernel

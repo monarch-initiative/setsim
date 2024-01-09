@@ -201,8 +201,9 @@ class IcCalculator:
         return term, ic
 
     def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId] = None,
-                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None, one_sided: bool = False) \
-            -> typing.Mapping[TermPair, float]:
+                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None, one_sided: bool = False,
+                            fragile_dict = False) \
+            -> typing.Union[typing.Mapping[TermPair, float], typing.Mapping[typing.Tuple[int, int], float]]:
         """
         Create a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer. The
         dictionary requires only the terms that are annotated in the samples being analyzed. (It is not necessary to
@@ -218,6 +219,8 @@ class IcCalculator:
         instances that already have an ic_dict stored.
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
+        if fragile_dict and not one_sided:
+            raise ValueError("Fragile dictionary can only be used with one_sided=True.")
 
         used_terms = self._subontology_terms
         if terms_in_samples is None and samples is None:
@@ -246,12 +249,17 @@ class IcCalculator:
             term_pairs_2 = itertools.combinations(used_terms_list, 2)
             total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
-
-        # Create matched set
-        matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in used_terms_list}
-
-        # Combine the dictionaries into a single dictionary
-        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
+        if fragile_dict:
+            # Create matched set
+            matched_dict = {(int(term.id), int(term.id)): self.ic_dict[term] for term in used_terms_list}
+            # Combine the dictionaries into a single dictionary
+            mica_dict = {(int(term[0].id), int(term[1].id)): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
+            return {**matched_dict, **mica_dict}
+        else:
+            # Create matched set
+            matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in used_terms_list}
+            # Combine the dictionaries into a single dictionary
+            mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
         return {**matched_dict, **mica_dict}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:
