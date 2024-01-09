@@ -1,5 +1,6 @@
 import abc
 import multiprocessing
+import warnings
 from warnings import filterwarnings
 
 import pandas as pd
@@ -51,6 +52,9 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         print(
             f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         patient_dict = {}
+        for disease in diseases:
+            if len(disease.phenotypic_features) < 1:
+                warnings.warn(f"Disease {disease.label} has no phenotypic features.")
         if self.multiprocess:
             with multiprocessing.Pool(processes=self.num_cpus) as pool:
                 disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
