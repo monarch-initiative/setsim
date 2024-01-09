@@ -52,9 +52,13 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         print(
             f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
         patient_dict = {}
+        contains_disease_zero_features = False
         for disease in diseases:
             if len(disease.phenotypic_features) < 1:
+                contains_disease_zero_features = True
                 warnings.warn(f"Disease {disease.label} has no phenotypic features.")
+        if contains_disease_zero_features:
+            diseases = [disease for disease in diseases if len(disease.phenotypic_features) > 0]
         if self.multiprocess:
             with multiprocessing.Pool(processes=self.num_cpus) as pool:
                 disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
