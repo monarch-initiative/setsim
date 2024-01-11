@@ -2,6 +2,7 @@ import abc
 import multiprocessing
 import typing
 import random
+import warnings
 from typing import Sequence
 
 import hpotk
@@ -24,14 +25,24 @@ class PatientGenerator:
     """
 
     def __init__(self, hpo: hpotk.MinimalOntology, num_patients: int, num_features_per_patient: int,
-                 root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
+                 root: typing.Union[str, hpotk.TermId] = "HP:0000118", ic_dict=None):
         self.root = root
         self.hpo = hpo
         self.num_patients = num_patients
         if num_features_per_patient < 1:
             raise ValueError("Number of features must be greater than 0.")
         self.num_features_per_patient = num_features_per_patient
-        self.terms_under_root = list(self.hpo.graph.get_descendants(root, include_source=True))
+        # If ic_dict is provided, remove most informative term from available terms because they are likely uncommon
+        # for samples
+        if ic_dict is not None:
+            max_ic = max(ic_dict.values())
+            self.available_terms = [key for key in ic_dict.keys() if ic_dict[key] < max_ic]
+            if len(self.available_terms) < 1000:
+                warnings.warn("Using ic_dict to avoid terms with max ic in null distribution patients requires that at "
+                              "least 1,000 terms have an ic less than the max ic.")
+                self.available_terms = list(self.hpo.graph.get_descendants(root, include_source=True))
+        else:
+            self.available_terms = list(self.hpo.graph.get_descendants(root, include_source=True))
 
     def generate(self):
         for patient_num in range(self.num_patients):
@@ -41,7 +52,7 @@ class PatientGenerator:
         # Generate random phenotypic features for greatest number of features
         features = []
         while len(features) < self.num_features_per_patient:
-            features = random.sample(self.terms_under_root, self.num_features_per_patient + 1)
+            features = random.sample(self.available_terms, self.num_features_per_patient + 1)
             ancestors = set(ancestor for feature in features for ancestor in set(self.hpo.graph.get_ancestors(feature)))
             for feature in features:
                 if feature in ancestors:

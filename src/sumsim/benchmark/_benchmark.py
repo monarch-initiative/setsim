@@ -43,7 +43,8 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
                                           columns=['disease_id', 'num_features'],
                                           data=data)
-        p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root)
+        p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root,
+                                 ic_dict=self.ic_dict)
         self.precomputed_patients = [patient for patient in p_gen.generate()]
         if not verbose:
             filterwarnings("ignore")
