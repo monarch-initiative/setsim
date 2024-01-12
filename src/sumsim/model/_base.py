@@ -91,7 +91,7 @@ class Sample(Phenotyped, Labeled):
                  hpo: hpotk.GraphAware,
                  disease_identifier: typing.Optional[DiseaseIdentifier] = None):
         self._label = label
-        self._pfs = remove_ancestors(phenotypic_features, hpo, self._label)
+        self._pfs = remove_ancestors(phenotypic_features, hpo)
         self._di = disease_identifier
 
     @property
@@ -137,7 +137,7 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
                  hpo: hpotk.GraphAware):
         self._id = identifier
         self._label = label
-        self._pfs = remove_ancestors(phenotypic_features, hpo, self._label)
+        self._pfs = remove_ancestors(phenotypic_features, hpo)
 
     @property
     def identifier(self) -> TermId:
@@ -161,10 +161,8 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
                 f'phenotypic_features={self._pfs})')
 
 
-def remove_ancestors(features: typing.Iterable[hpotk.TermId], hpo: hpotk.GraphAware, label: str):
+def remove_ancestors(features: typing.Iterable[hpotk.TermId], hpo: hpotk.GraphAware):
     features = list(features)
     ancestor_features = set(ancestor for pf in features for ancestor in hpo.graph.get_ancestors(pf))
     drop_features = [feature for feature in features if feature in ancestor_features]
-    if bool(drop_features):
-        warnings.warn(f'Sample ({label}) has the following ancestors removed: {drop_features}')
     return tuple(feature for feature in features if feature not in drop_features)
