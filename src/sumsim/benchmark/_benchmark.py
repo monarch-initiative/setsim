@@ -25,7 +25,8 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  multiprocess: bool = True,
                  num_cpus: int = None,
-                 chunksize: int = 1, verbose: bool = False):
+                 chunksize: int = 1, verbose: bool = False,
+                 avoid_max_ic_for_null_patients: bool = False):
         KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, delta_ic_dict=delta_ic_dict,
                                 root=root)
         self.patients = patients
@@ -43,8 +44,11 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         self.patient_table = pd.DataFrame(index=[patient.label for patient in self.patients],
                                           columns=['disease_id', 'num_features'],
                                           data=data)
-        p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root,
-                                 ic_dict=self.ic_dict)
+        if avoid_max_ic_for_null_patients:
+            p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root,
+                                     ic_dict=self.ic_dict)
+        else:
+            p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root)
         self.precomputed_patients = [patient for patient in p_gen.generate()]
         if not verbose:
             filterwarnings("ignore")
