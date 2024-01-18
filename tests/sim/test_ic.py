@@ -85,7 +85,7 @@ class TestIcTransformer(unittest.TestCase):
         self.root_identifier = hpo.get_term(self.root).identifier
         calc = IcCalculator(hpo, root=self.root)
         self.ic_dict = calc.calculate_ic_from_samples(samples=test_samples)
-        self.transformer = IcTransformer(hpo, root=self.root)
+        self.transformer = IcTransformer(hpo, root=self.root, samples=test_samples)
 
     def test_use_mean(self):
         delta_ic_dict = self.transformer._use_mean(self.ic_dict)
@@ -140,6 +140,35 @@ class TestIcTransformer(unittest.TestCase):
             # and the others have 3
             hpo.get_term("HP:0032599").identifier: 0,  # No one has term or parent
             hpo.get_term("HP:0004015").identifier: 0  # HP:0004015 has 2 parents, 1 has 4 annotations
+            # and the other has 3
+        }
+        for key, value in value_tests.items():
+            msg = (f'\n   {key.value} has the has a delta_ic of {delta_ic_dict[key]} when it is expected to be {value}.'
+                   f'\n   The original IC (from self.ic_dict) of {key.value} is {self.ic_dict[key]}')
+            self.assertAlmostEqual(value, delta_ic_dict[key], 8, msg=msg)
+
+    def test_use_bayesian(self):
+        delta_ic_dict = self.transformer._use_bayesian(self.ic_dict)
+        key_iterator = iter(delta_ic_dict)
+        self.assertIsInstance(next(key_iterator), hpotk.TermId)
+        self.assertEqual(set(delta_ic_dict), set(self.ic_dict))
+        # IC and delta_ic should be the same for the root since the root has no parents (parent_ic=0).
+        self.assertEqual(delta_ic_dict[self.root_identifier], self.ic_dict[self.root_identifier])
+
+        # Test various values
+        # Dictionary - DefaultTermId : New IC
+        value_tests = {
+            hpo.get_term("HP:0032648").identifier: 0,  # Term and parents have only 1 annotation
+            hpo.get_term("HP:0031264").identifier: 0,  # Term and parents have only 1 annotation
+            hpo.get_term("HP:0031263").identifier: 0,  # Term and parents have only 1 annotation
+            hpo.get_term("HP:0000119").identifier: 1.38629436112,  # HP:0000119 is an ancestor of HP:0032648 and the
+            # child of HP:0000118
+            hpo.get_term("HP:0004021").identifier: 0.0,  # HP:0004021 has 2 parents,
+            # one with 2 annotations and the other with 3
+            hpo.get_term("HP:0003981").identifier: 0.0,  # HP:0003981 has 3 parents, 1 has 4 annotations
+            # and the others have 3
+            hpo.get_term("HP:0032599").identifier: 0,  # No one has term or parent
+            hpo.get_term("HP:0004015").identifier: 0.0  # HP:0004015 has 2 parents, 1 has 4 annotations
             # and the other has 3
         }
         for key, value in value_tests.items():
