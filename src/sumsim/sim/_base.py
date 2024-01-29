@@ -93,7 +93,7 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def _score_feature_sets(self, shared_features: typing.Set[hpotk.TermId]) -> float:
+    def _score_feature_sets(self, feature_sets: (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId])) -> float:
         pass
 
 
@@ -115,6 +115,10 @@ class OntoSetSimilarityKernel(SetSimilarityKernel, metaclass=abc.ABCMeta):
 
     def compute(self, a: Phenotyped, b: Phenotyped) -> SimilarityResult:
         feature_sets = self._get_feature_sets(a, b)
+        return SimilarityResult(self._score_feature_sets(feature_sets))
+
+    def compute_from_sets(self, set_a: typing.Set[hpotk.TermId], set_b: typing.Set[hpotk.TermId]) -> SimilarityResult:
+        feature_sets = set_a, set_b
         return SimilarityResult(self._score_feature_sets(feature_sets))
 
 
