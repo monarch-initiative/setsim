@@ -91,9 +91,22 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
     """
     A base class for similarity kernels that calculate similarity by intersecting sets of terms and ancestors.
     """
+    @abc.abstractmethod
+    def _normalize_by_union(self) -> bool:
+        pass
+
+    def _score_feature_sets(self, feature_sets: (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId])) -> float:
+        intersection_score = self._score_feature_set(feature_sets[0].intersection(feature_sets[1]))
+        if self._normalize_by_union():
+            union_score = self._score_feature_set(feature_sets[0].union(feature_sets[1]))
+            if union_score == 0:
+                return 0.0
+            else:
+                return intersection_score / self._score_feature_set(feature_sets[0].union(feature_sets[1]))
+        return intersection_score
 
     @abc.abstractmethod
-    def _score_feature_sets(self, feature_sets: (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId])) -> float:
+    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
         pass
 
 
@@ -102,7 +115,7 @@ class OntoSetSimilarityKernel(SetSimilarityKernel, metaclass=abc.ABCMeta):
     A base class for similarity kernels that find ancestors of terms.
     """
 
-    def __init__(self, hpo: hpotk.GraphAware, root: str = "HP:0000118", **kwargs):
+    def __init__(self, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
         self._hpo = hpo.graph
         self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
 
@@ -131,7 +144,7 @@ class SimilaritiesKernel(metaclass=abc.ABCMeta):
         pass
 
 
-class SetSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
+class SetSimilaritiesKernel(SimilaritiesKernel, SetSimilarityKernel, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
         SimilaritiesKernel.__init__(self, disease)
         self._hpo = hpo.graph
@@ -147,3 +160,21 @@ class SetSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
             # Samples may include terms that are not under root since this set is intersecting with disease features.
             yield self._ancestor_dict.get(pf, set())
 
+    def compute(self, sample: Phenotyped, return_last_result: bool = False) \
+            -> typing.Union[typing.Sequence[float], float]:
+        disease_leftovers = self._disease_features.copy()
+        union_set = disease_leftovers.copy()
+        intersection_score = 0.0
+        results = []
+        for next_set in self._sample_iterator(sample):
+            intersection_score_addition = self._score_feature_set(next_set.intersection(disease_leftovers))
+            disease_leftovers = disease_leftovers.difference(next_set)
+            intersection_score += intersection_score_addition
+            if self._normalize_by_union():
+                union_set = next_set.union(union_set)
+                results.append(intersection_score / self._score_feature_set(union_set))
+            else:
+                results.append(intersection_score)
+        if return_last_result:
+            return results[-1]
+        return results

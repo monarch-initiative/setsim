@@ -24,16 +24,14 @@ class JaccardSimilarity(SetSimilarityKernel, metaclass=abc.ABCMeta):
     `SumSimilarity` is a base class for similarity kernels that calculate similarity by summing the similarity
     of all pairs of phenotypic features.
     """
+    def _normalize_by_union(self) -> bool:
+        return True
 
-    def _score_feature_sets(self, feature_sets: (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId])) -> float:
-        union_len = len(feature_sets[0].union(feature_sets[1]))
-        if union_len == 0:
-            return 0.0
-        intersection_len = len(feature_sets[0].intersection(feature_sets[1]))
-        return intersection_len / union_len
+    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
+        return len(feature_set)
 
 
-class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity):
+class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity, metaclass=abc.ABCMeta):
     """
     `JaccardSimilarityKernel` uses *both* present and excluded phenotypic features to calculate the similarity.
 
@@ -59,32 +57,6 @@ class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity):
         return True
 
 
-class JaccardSimilaritiesKernel(SetSimilaritiesKernel, metaclass=abc.ABCMeta):
+class JaccardSimilaritiesKernel(SetSimilaritiesKernel, JaccardSimilarity, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)
-
-    @staticmethod
-    def _intersection_addition(new_feature_set: Set[hpotk.TermId], disease_leftovers: Set[hpotk.TermId]) \
-            -> (float, Set[hpotk.TermId]):
-        additional_intersection_set = new_feature_set.intersection(disease_leftovers)
-        return len(additional_intersection_set), disease_leftovers.difference(additional_intersection_set)
-
-    def _next_union(self, new_feature_set: Set[hpotk.TermId], current_union_set: Set[hpotk.TermId]) \
-            -> (float, Set[hpotk.TermId]):
-        next_union = new_feature_set.union(current_union_set).intersection(self._features_under_root)
-        return len(next_union), next_union
-
-    def compute(self, sample: Phenotyped, return_last_result: bool = False) \
-            -> typing.Union[typing.Sequence[float], float]:
-        disease_leftovers = self._disease_features.copy()
-        union_set = disease_leftovers.copy()
-        intersection = 0.0
-        results = []
-        for next_set in self._sample_iterator(sample):
-            intersection_addition, disease_leftovers = self._intersection_addition(next_set, disease_leftovers)
-            intersection += intersection_addition
-            union, union_set = self._next_union(next_set, union_set)
-            results.append(intersection / union)
-        if return_last_result:
-            return results[-1]
-        return results
