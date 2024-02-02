@@ -13,11 +13,15 @@ from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, JaccardSimilarityKernel
 from sumsim.sim import IcCalculator, IcTransformer
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
+from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from sumsim.sim._sumsim import SumSimSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
+
+root_sample = Sample(phenotypic_features=[hpo.get_term("HP:0000118").identifier], label="Root", hpo=hpo)
+empty_sample = Sample(phenotypic_features=[], label="Empty", hpo=hpo)
 
 # test_phenopackets has five samples with Four Terms
 temp_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
@@ -88,6 +92,30 @@ class TestSumsim(unittest.TestCase):
         matt_bill_overlap = set(hpo.get_term(term_id).identifier for term_id in matt_bill_overlap_ids)
         feature_sets = kernel._get_feature_sets(test_samples[1], test_samples[2])
         self.assertEqual(feature_sets[0].intersection(feature_sets[1]), matt_bill_overlap)
+        # Test that passing terms with zero ic returns zero similarity
+        self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
+
+    def test_simgic(self):
+        kernel = SimGicSimilarityKernel(hpo, ic_dict)
+        self.assertAlmostEqual(kernel.compute(test_samples[0], test_samples[0]).similarity, 1.0, 8)
+        # Test that passing terms with zero ic returns zero similarity
+        self.assertEqual(kernel.compute(test_samples[0], root_sample).similarity, 0.0)
+        self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
+        test_sample_1 = Sample(phenotypic_features=hpo.graph.get_children("HP:0000118"), label="test", hpo=hpo)
+        test_sample_2 = Sample(phenotypic_features=[hpo.get_term("HP:0000152").identifier], label="test", hpo=hpo)
+        self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 1 / 11, 8)
+
+    def test_simgicimilarities(self):
+        similarity_kernel = SimGicSimilarityKernel(hpo, ic_dict)
+        toms_features = test_samples[0].phenotypic_features
+        sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
+                            for i in range(1, len(toms_features) + 1)]
+        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+                              sample_iteration]
+        similarities_kernel = SimGicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, ic_dict=ic_dict)
+        similarities_result = similarities_kernel.compute(test_samples[0])
+        self.assertEqual(similarity_results, similarities_result)
+        self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
     def test_sumsimsimilarities(self):
         similarity_kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
@@ -99,6 +127,7 @@ class TestSumsim(unittest.TestCase):
         similarities_kernel = SumSimSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
         similarities_result = similarities_kernel.compute(test_samples[0])
         self.assertEqual(similarity_results, similarities_result)
+        self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
     def test_jaccardsimilarities(self):
         similarity_kernel = JaccardSimilarityKernel(hpo)
@@ -110,7 +139,6 @@ class TestSumsim(unittest.TestCase):
         similarities_kernel = JaccardSimilaritiesKernel(disease=test_samples[3], hpo=hpo)
         similarities_result = similarities_kernel.compute(test_samples[0])
         self.assertEqual(similarity_results, similarities_result)
-
 
 
 if __name__ == '__main__':

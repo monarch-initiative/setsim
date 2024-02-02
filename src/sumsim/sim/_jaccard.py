@@ -9,7 +9,7 @@ import hpotk
 
 from sumsim.model import Phenotyped
 from ._base import SimilarityKernel, SimilarityResult, SetSimilarityKernel, OntoSetSimilarityKernel, \
-    SetSimilaritiesKernel
+    SetSimilaritiesKernel, SetSizeSimilarity
 
 HPO_PATTERN = re.compile(r"HP:(?P<ID>\d{7})")
 
@@ -19,16 +19,14 @@ An implementation detail for Jaccard kernels.
 """
 
 
-class JaccardSimilarity(SetSimilarityKernel, metaclass=abc.ABCMeta):
+class JaccardSimilarity(SetSizeSimilarity, metaclass=abc.ABCMeta):
     """
     `SumSimilarity` is a base class for similarity kernels that calculate similarity by summing the similarity
     of all pairs of phenotypic features.
     """
-    def _normalize_by_union(self) -> bool:
-        return True
 
-    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
-        return len(feature_set)
+    def _normalization_method(self):
+        return "union"
 
 
 class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity, metaclass=abc.ABCMeta):
