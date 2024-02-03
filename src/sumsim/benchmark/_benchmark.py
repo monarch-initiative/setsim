@@ -10,7 +10,7 @@ from typing import Sequence
 import hpotk
 from tqdm import tqdm
 
-from sumsim.model import DiseaseModel, Sample
+from sumsim.model import DiseaseModel, Sample, Phenotyped
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
 from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGenerator
 from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKernel
@@ -22,13 +22,14 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
                  mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+                 bayes_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  multiprocess: bool = True,
                  num_cpus: int = None,
                  chunksize: int = 1, verbose: bool = False,
                  avoid_max_ic_for_null_patients: bool = False):
-        KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, delta_ic_dict=delta_ic_dict,
-                                root=root)
+        KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+                                delta_ic_dict=delta_ic_dict, root=root)
         self.patients = patients
         self.n_iter_distribution = n_iter_distribution
         self.num_features_distribution = num_features_distribution
@@ -53,10 +54,7 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         if not verbose:
             filterwarnings("ignore")
 
-    def compute_ranks(self, diseases: Sequence[DiseaseModel]):
-        print(
-            f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
-        patient_dict = {}
+    def compute_diagnostic_similarities(self, diseases: Sequence[DiseaseModel]):
         contains_disease_zero_features = False
         for disease in diseases:
             if len(disease.phenotypic_features) < 1:
@@ -64,38 +62,60 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
                 warnings.warn(f"Disease {disease.label} has no phenotypic features.")
         if contains_disease_zero_features:
             diseases = [disease for disease in diseases if len(disease.phenotypic_features) > 0]
+        return self._compute_similarities(diseases)
+
+    def compute_person2person_similarities(self, samples: Sequence[Sample]):
+        contains_disease_zero_features = False
+        for sample in samples:
+            if len(sample.phenotypic_features) < 1:
+                contains_disease_zero_features = True
+                warnings.warn(f"Sample {sample.label} has no phenotypic features.")
+        if contains_disease_zero_features:
+            samples = [sample for sample in samples if len(sample.phenotypic_features) > 0]
+        return self._compute_similarities(samples)
+
+    def _compute_similarities(self, samples: Sequence[typing.Union[DiseaseModel, Sample]]):
+        print(
+            f"There are {multiprocessing.cpu_count()} CPUs available for multiprocessing. Using {self.num_cpus} CPUs.")
+        patient_dict = {}
         if self.multiprocess:
             with multiprocessing.Pool(processes=self.num_cpus) as pool:
-                disease_dicts = pool.imap_unordered(self._rank_across_methods, diseases, chunksize=self.chunksize)
-                for result in tqdm(disease_dicts, total=len(diseases), desc="Diseases"):
+                disease_dicts = pool.imap_unordered(self._rank_across_methods, samples, chunksize=self.chunksize)
+                for result in tqdm(disease_dicts, total=len(samples), desc="Diseases"):
                     patient_dict = {**patient_dict, **result}
         else:
-            for disease in tqdm(diseases, total=len(diseases), desc="Diseases"):
+            for disease in tqdm(samples, total=len(samples), desc="Diseases"):
                 patient_dict = {**patient_dict, **self._rank_across_methods(disease)}
         self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)],
                                        axis=1)
         return self.patient_table
 
-    def _rank_across_methods(self, disease: DiseaseModel) -> typing.Mapping[str, typing.List[float]]:
+    def _rank_across_methods(self, sample: typing.Union[DiseaseModel, Sample]) -> typing.Mapping[str, typing.List[float]]:
         patient_dict = {}
         for method in self.similarity_methods:
-            patient_dict = {**patient_dict, **self._rank_patients(method, disease)}
+            patient_dict = {**patient_dict, **self._rank_patients(method, sample)}
         return patient_dict
 
-    def _rank_patients(self, similarity_method: str, disease: DiseaseModel):
-        kernel = self._define_kernel(disease, similarity_method)
+    def _rank_patients(self, similarity_method: str, sample: typing.Union[DiseaseModel, Sample]):
+        kernel = self._define_kernel(sample, similarity_method)
         # Get Column Names
-        if not disease.identifier.value:
-            label = disease.label
+        if type(sample) is DiseaseModel:
+            if not sample.identifier.value:
+                label = sample.label
+            else:
+                label = sample.identifier.value.replace(':', '_')
+        elif type(sample) is Sample:
+            label = sample.label
         else:
-            label = disease.identifier.value.replace(':', '_')
+            raise TypeError("Sample must be either DiseaseModel or Sample.")
         sim = f'{label}_{similarity_method}_sim'
         pval = f'{label}_{similarity_method}_pval'
         # Calculate similarity of each patient to the disease
         patient_dict = {sim: [kernel.compute(patient, return_last_result=True) for patient in self.patients]}
-        dist_method = GetNullDistribution(disease, hpo=self.hpo, num_patients=self.n_iter_distribution,
-                                          num_features_per_patient=self.num_features_distribution, root=self.root,
-                                          kernel=kernel, precomputed_patients=self.precomputed_patients)
-        patient_dict[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
-                              for similarity, patient in zip(patient_dict[sim], self.patients)]
+        if self.n_iter_distribution > 0:
+            dist_method = GetNullDistribution(sample, hpo=self.hpo, num_patients=self.n_iter_distribution,
+                                              num_features_per_patient=self.num_features_distribution, root=self.root,
+                                              kernel=kernel, precomputed_patients=self.precomputed_patients)
+            patient_dict[pval] = [dist_method.get_pval(similarity, len(patient.phenotypic_features))
+                                  for similarity, patient in zip(patient_dict[sim], self.patients)]
         return patient_dict

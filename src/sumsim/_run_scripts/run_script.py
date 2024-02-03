@@ -69,6 +69,6 @@ b_mark = Benchmark(hpo=hp,
                    similarity_methods=methods,
                    multiprocess=True
                    )
-results = b_mark.compute_ranks(diseases[:500])  # or whatever slice we want
+results = b_mark.compute_diagnostic_similarities(diseases[:500])  # or whatever slice we want
 export_name = f'benchmark_results_m_{methods}_ndist_{null_dist_samples}_nfeatures_{num_features}.csv'
 results.to_csv(export_name)

@@ -13,6 +13,8 @@ from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, JaccardSimilarityKernel
 from sumsim.sim import IcCalculator, IcTransformer
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
+from sumsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
+from sumsim.sim._simcic import SimCicSimilarityKernel, SimCicSimilaritiesKernel
 from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from sumsim.sim._sumsim import SumSimSimilaritiesKernel
 
@@ -43,8 +45,9 @@ calc = IcCalculator(hpo)
 ic_dict = calc.calculate_ic_from_samples(samples=test_samples)
 
 # Generate Delta IC Dictionary
-transformer = IcTransformer(hpo)
+transformer = IcTransformer(hpo, samples=test_samples)
 delta_ic_dict = transformer.transform(ic_dict, strategy="max")
+bayes_ic_dict = transformer.transform(ic_dict, strategy="bayesian")
 
 
 # The table below shows which terms each sample has:
@@ -95,6 +98,27 @@ class TestSumsim(unittest.TestCase):
         # Test that passing terms with zero ic returns zero similarity
         self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
 
+    def test_phrank(self):
+        # Phrank would normally takes the bayes_ic_dict as an argument, but we are using the delta_ic_dict for testing
+        # since it should behave exactly like sumsim when given the delta_ic_dict
+        kernel_phrank = PhrankSimilarityKernel(hpo, bayes_ic_dict=delta_ic_dict)
+        kernel_sumsim = SumSimSimilarityKernel(hpo, delta_ic_dict=delta_ic_dict)
+        for i_sample in test_samples:
+            self.assertEqual(kernel_phrank.compute(i_sample, test_samples[0]).similarity,
+                             kernel_sumsim.compute(i_sample, test_samples[0]).similarity)
+
+    def test_phranksimilarities(self):
+        similarity_kernel = PhrankSimilarityKernel(hpo, bayes_ic_dict)
+        toms_features = test_samples[0].phenotypic_features
+        sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
+                            for i in range(1, len(toms_features) + 1)]
+        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+                              sample_iteration]
+        similarities_kernel = PhrankSimilaritiesKernel(disease=test_samples[3], hpo=hpo, bayes_ic_dict=bayes_ic_dict)
+        similarities_result = similarities_kernel.compute(test_samples[0])
+        self.assertEqual(similarity_results, similarities_result)
+        self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
+
     def test_simgic(self):
         kernel = SimGicSimilarityKernel(hpo, ic_dict)
         self.assertAlmostEqual(kernel.compute(test_samples[0], test_samples[0]).similarity, 1.0, 8)
@@ -113,6 +137,28 @@ class TestSumsim(unittest.TestCase):
         similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
                               sample_iteration]
         similarities_kernel = SimGicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, ic_dict=ic_dict)
+        similarities_result = similarities_kernel.compute(test_samples[0])
+        self.assertEqual(similarity_results, similarities_result)
+        self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
+
+    def test_simcic(self):
+        kernel = SimGicSimilarityKernel(hpo, delta_ic_dict)
+        self.assertAlmostEqual(kernel.compute(test_samples[0], test_samples[0]).similarity, 1.0, 8)
+        # Test that passing terms with zero ic returns zero similarity
+        self.assertEqual(kernel.compute(test_samples[0], root_sample).similarity, 0.0)
+        self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
+        test_sample_1 = Sample(phenotypic_features=hpo.graph.get_children("HP:0000118"), label="test", hpo=hpo)
+        test_sample_2 = Sample(phenotypic_features=[hpo.get_term("HP:0000152").identifier], label="test", hpo=hpo)
+        self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 1 / 11, 8)
+
+    def test_simcicimilarities(self):
+        similarity_kernel = SimCicSimilarityKernel(hpo, delta_ic_dict)
+        toms_features = test_samples[0].phenotypic_features
+        sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
+                            for i in range(1, len(toms_features) + 1)]
+        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+                              sample_iteration]
+        similarities_kernel = SimCicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
         similarities_result = similarities_kernel.compute(test_samples[0])
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])

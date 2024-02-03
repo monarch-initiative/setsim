@@ -14,6 +14,9 @@ from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
 from sumsim.sim._base import SimilaritiesKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
+from sumsim.sim._phrank import PhrankSimilaritiesKernel
+from sumsim.sim._simcic import SimCicSimilaritiesKernel
+from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from sumsim.sim._sumsim import SumSimSimilaritiesKernel
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
@@ -64,20 +67,33 @@ class KernelIterator:
     def __init__(self, hpo: hpotk.MinimalOntology,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+                 bayes_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  mica_dict: typing.Mapping[TermPair, float] = None,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
         self.hpo = hpo
         self.root = root
         self.ic_dict = ic_dict
         self.delta_ic_dict = delta_ic_dict
+        self.bayes_ic_dict = bayes_ic_dict
         self.mica_dict = mica_dict
 
     def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
-        if method == "sumsim":
+        if method in ["sumsim", "simcic"]:
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
-            kernel = SumSimSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+            if method == "sumsim":
+                kernel = SumSimSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+            else:
+                kernel = SimCicSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+        elif method == "phrank":
+            if self.bayes_ic_dict is None:
+                raise ValueError("bayes_ic_dict must be provided for phrank method.")
+            kernel = PhrankSimilaritiesKernel(disease, self.hpo, self.bayes_ic_dict, self.root)
+        elif method == "simgic":
+            if self.ic_dict is None:
+                raise ValueError("ic_dict must be provided for simgic method.")
+            kernel = SimGicSimilaritiesKernel(disease, self.hpo, self.ic_dict, self.root)
         elif method == "phenomizer":
             if self.mica_dict is None:
                 if self.ic_dict is None:

@@ -27,8 +27,9 @@ ic_dict = calc.calculate_ic_from_samples(samples=test_samples)
 mica_dict = calc.create_mica_ic_dict(samples=test_samples, ic_dict=ic_dict)
 
 # Generate Delta IC Dictionary
-transformer = IcTransformer(hpo)
+transformer = IcTransformer(hpo, samples=test_samples)
 delta_ic_dict = transformer.transform(ic_dict, strategy="max")
+bayes_ic_dict = transformer.transform(ic_dict, strategy="bayesian")
 
 
 # The table below shows which terms each sample has:
@@ -69,9 +70,10 @@ class TestBenchmark(unittest.TestCase):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
-        benchmark = Benchmark(hpo, test_samples, 100, 10, delta_ic_dict=delta_ic_dict, mica_dict=mica_dict,
-                              chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
-        results = benchmark.compute_ranks([disease])
+        benchmark = Benchmark(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+                              delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
+                              similarity_methods=["sumsim", "phenomizer", "jaccard", "simgic", "phrank", "simcic"])
+        results = benchmark.compute_diagnostic_similarities([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
@@ -82,11 +84,19 @@ class TestBenchmark(unittest.TestCase):
                         results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_jaccard_sim"].loc["Tom"] >
                         results["MONDO_1234567_jaccard_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_simgic_sim"].loc["Tom"] >
+                        results["MONDO_1234567_simgic_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_phrank_sim"].loc["Tom"] >
+                        results["MONDO_1234567_phrank_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_simcic_sim"].loc["Tom"] >
+                        results["MONDO_1234567_simcic_sim"].loc["Bill"])
 
         # Repeat with ic_dict
-        benchmark = Benchmark(hpo, test_samples, 100, 10, delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
-                              chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
-        results = benchmark.compute_ranks([disease])
+        benchmark = Benchmark(hpo, test_samples, 100, 10, bayes_ic_dict=bayes_ic_dict, delta_ic_dict=delta_ic_dict,
+                              ic_dict=ic_dict,
+                              chunksize=1,
+                              similarity_methods=["sumsim", "phenomizer", "jaccard", "simgic", "phrank", "simcic"])
+        results = benchmark.compute_diagnostic_similarities([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
@@ -95,6 +105,40 @@ class TestBenchmark(unittest.TestCase):
                          results["MONDO_1234567_phenomizer_pval"].loc["Kayla"])
         self.assertTrue(results["MONDO_1234567_phenomizer_sim"].loc["Tom"] >
                         results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_jaccard_sim"].loc["Tom"] >
+                        results["MONDO_1234567_jaccard_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_simgic_sim"].loc["Tom"] >
+                        results["MONDO_1234567_simgic_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_phrank_sim"].loc["Tom"] >
+                        results["MONDO_1234567_phrank_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_simcic_sim"].loc["Tom"] >
+                        results["MONDO_1234567_simcic_sim"].loc["Bill"])
+
+        # Repeat without distribution
+        benchmark = Benchmark(hpo, test_samples, 0, 10, delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
+                              chunksize=1, similarity_methods=["sumsim", "phenomizer", "jaccard"])
+        results = benchmark.compute_diagnostic_similarities([disease])
+        self.assertTrue(results["MONDO_1234567_sumsim_sim"].loc["Tom"] >
+                        results["MONDO_1234567_sumsim_sim"].loc["Bill"])
+        self.assertTrue(results["MONDO_1234567_phenomizer_sim"].loc["Tom"] >
+                        results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
+
+    def test_patient2patient_similarities(self):
+        benchmark = Benchmark(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+                              delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
+                              similarity_methods=["sumsim", "phenomizer", "jaccard", "simgic", "phrank", "simcic"])
+        results = benchmark.compute_person2person_similarities(test_samples)
+        # assert symmetries
+        self.assertEqual(results["Kayla_phrank_sim"].loc["Tom"],
+                         results["Tom_phrank_sim"].loc["Kayla"])
+        self.assertEqual(results["Bill_sumsim_sim"].loc["Tom"],
+                         results["Tom_sumsim_sim"].loc["Bill"])
+        self.assertEqual(results["Bill_jaccard_sim"].loc["Tom"],
+                         results["Tom_jaccard_sim"].loc["Bill"])
+        self.assertEqual(results["Bill_simgic_sim"].loc["Tom"],
+                         results["Tom_simgic_sim"].loc["Bill"])
+        self.assertEqual(results["Bill_simcic_sim"].loc["Tom"],
+                         results["Tom_simcic_sim"].loc["Bill"])
 
 
 if __name__ == '__main__':
