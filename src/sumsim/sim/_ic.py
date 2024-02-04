@@ -83,20 +83,15 @@ class IcTransformer:
     def _use_bayesian(self, ic_dict: typing.Mapping[hpotk.TermId, float]):
         if self._samples is None:
             raise ValueError("Bayesian calculation requires samples or diseases used for IC dictionary creation.")
-        phenotyped_array = get_phenotyped_array(self._samples, ic_dict.keys())
+        phenotyped_array = get_phenotyped_array(self._samples, self._hpo.graph)
         delta_ic_dict = {}
         for term_id, term_ic in ic_dict.items():
             if term_id != self._root:
                 parents = list(self._hpo.graph.get_parents(term_id))
                 if len(parents) > 1:
-                    parent_descendants = set(
-                        i for term in parents for i in self._hpo.graph.get_descendants(term, include_source=True))
-                    relevant_parent_descendants = [i.value for i in parent_descendants.intersection(ic_dict.keys())]
-                    parent_freq = sum(1 if any(row[relevant_parent_descendants]) else 0 for row in phenotyped_array)
-                    term_descendants = set(
-                        i for term in parents for i in self._hpo.graph.get_descendants(term, include_source=True))
-                    relevant_term_descendants = [i.value for i in term_descendants.intersection(ic_dict.keys())]
-                    term_freq = sum(1 if any(row[relevant_term_descendants]) else 0 for row in phenotyped_array)
+                    relevant_parents = [i.value for i in set(parents).intersection(ic_dict.keys())]
+                    parent_freq = sum(1 if any(row[relevant_parents]) else 0 for row in phenotyped_array)
+                    term_freq = sum(row[term_id.value] for row in phenotyped_array)
                     if term_freq == 0:
                         term_freq = 1
                     if parent_freq == 0:
@@ -207,7 +202,7 @@ class IcCalculator:
         if len(phenotypes) > len(self._phenotypes):
             excluded_phenotypes = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
             warnings.warn(f"The sample(s) {excluded_phenotypes} were removed because they have no features.")
-        self._phenotyped_array = get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
+        self._phenotyped_array = get_phenotyped_array(self._phenotypes, self._hpo)
         # Create a multiprocessing pool
         pool = multiprocessing.Pool(processes=self._num_processes)
 
@@ -225,12 +220,7 @@ class IcCalculator:
         return self.ic_dict
 
     def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
-        term_descendants = set(i for i in self._hpo.get_descendants(term, include_source=True))
-        relevant_descendants = [i.value for i in term_descendants.intersection(self._phenotyped_terms)]
-        if len(relevant_descendants) > 0:
-            freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self._phenotyped_array)
-        else:
-            freq = 1
+        freq = max(1, sum(row[term.value] for row in self._phenotyped_array))
         ic = math.log(len(self._phenotyped_array) / freq)
         return term, ic
 
@@ -381,14 +371,16 @@ class IcCalculator:
 
 
 def get_phenotyped_array(phenotypes: typing.Sequence[Phenotyped],
-                         used_pheno_abn: typing.Iterable[hpotk.TermId]) -> np.array:
+                         hpo: hpotk.MinimalOntology.graph) -> np.array:
     # Convert hpotk.TermID to string for array index
+    used_pheno_abn = set(hpo.get_descendants("HP:0000118", include_source=True))
     array_type = [(col.value, bool) for col in used_pheno_abn]
     array = np.zeros(len(phenotypes), dtype=array_type)
     i = 0
     for sample in phenotypes:
         for term in sample.phenotypic_features:
-            if term in used_pheno_abn:
-                array[term.value][i] = True
+            for ancestor in hpo.get_ancestors(term, include_source=True):
+                if ancestor in used_pheno_abn:
+                    array[ancestor.value][i] = True
         i = i + 1
     return array

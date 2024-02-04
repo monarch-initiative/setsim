@@ -163,12 +163,12 @@ class TestIcTransformer(unittest.TestCase):
             hpo.get_term("HP:0031263").identifier: 0,  # Term and parents have only 1 annotation
             hpo.get_term("HP:0000119").identifier: 1.38629436112,  # HP:0000119 is an ancestor of HP:0032648 and the
             # child of HP:0000118
-            hpo.get_term("HP:0004021").identifier: 0.0,  # HP:0004021 has 2 parents,
+            hpo.get_term("HP:0004021").identifier: 0.40546510810,  # HP:0004021 has 2 parents,
             # one with 2 annotations and the other with 3
-            hpo.get_term("HP:0003981").identifier: 0.0,  # HP:0003981 has 3 parents, 1 has 4 annotations
+            hpo.get_term("HP:0003981").identifier: 0.287682072451,  # HP:0003981 has 3 parents, 1 has 4 annotations
             # and the others have 3
             hpo.get_term("HP:0032599").identifier: 0,  # No one has term or parent
-            hpo.get_term("HP:0004015").identifier: 0.0  # HP:0004015 has 2 parents, 1 has 4 annotations
+            hpo.get_term("HP:0004015").identifier: 0.287682072451  # HP:0004015 has 2 parents, 1 has 4 annotations
             # and the other has 3
         }
         for key, value in value_tests.items():
