@@ -181,8 +181,8 @@ class SetSimilaritiesKernel(SimilaritiesKernel, SetSimilarityKernel, metaclass=a
             feature.value: set(anc.value for anc in self._hpo.get_ancestors(feature, include_source=True)
                                if anc in self._features_under_root)
             for feature in self._features_under_root}
-        self._disease_features = set(ancestor for pf in disease.phenotypic_features for ancestor in
-                                     self._ancestor_dict[pf.value] if pf in self._features_under_root)
+        self._disease_features = set(ancestor for pf in disease.phenotypic_features if pf in self._features_under_root
+                                     for ancestor in self._ancestor_dict[pf.value])
 
     def _sample_iterator(self, sample: Phenotyped) -> typing.Iterable[typing.Set[hpotk.TermId]]:
         for pf in sample.phenotypic_features:
