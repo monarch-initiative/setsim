@@ -13,6 +13,7 @@ from sumsim.model import Sample, DiseaseModel, Phenotyped
 from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
 from sumsim.sim._base import SimilaritiesKernel
+from sumsim.sim._count import CountSimilaritiesKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilaritiesKernel
 from sumsim.sim._simcic import SimCicSimilaritiesKernel
@@ -109,6 +110,8 @@ class KernelIterator:
             kernel = PhenomizerSimilaritiesKernel(disease, temp_mica_dict, use_fragile_mica_dict=True)
         elif method == "jaccard":
             kernel = JaccardSimilaritiesKernel(disease, self.hpo, self.root)
+        elif method == "count":
+            kernel = CountSimilaritiesKernel(disease, self.hpo, self.root)
         else:
             raise ValueError("Invalid method.")
         return kernel

@@ -72,7 +72,8 @@ class TestBenchmark(unittest.TestCase):
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         benchmark = Benchmark(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                               delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
-                              similarity_methods=["sumsim", "phenomizer", "jaccard", "simgic", "phrank", "simcic"])
+                              similarity_methods=["sumsim", "phenomizer", "jaccard", "simgic", "phrank", "simcic",
+                                                  "count"])
         results = benchmark.compute_diagnostic_similarities([disease])
         self.assertTrue(results["MONDO_1234567_sumsim_pval"].loc["Tom"] <
                         results["MONDO_1234567_sumsim_pval"].loc["Bill"])
