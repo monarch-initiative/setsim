@@ -12,6 +12,7 @@ from sumsim.model import Sample
 from sumsim.model._base import FastPhenotyped
 from sumsim.sim import SumSimSimilarityKernel, JaccardSimilarityKernel
 from sumsim.sim import IcCalculator, IcTransformer
+from sumsim.sim._count import CountSimilarityKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
 from sumsim.sim._simcic import SimCicSimilarityKernel, SimCicSimilaritiesKernel
@@ -97,6 +98,21 @@ class TestSumsim(unittest.TestCase):
         self.assertEqual(feature_sets[0].intersection(feature_sets[1]), matt_bill_overlap)
         # Test that passing terms with zero ic returns zero similarity
         self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
+
+    def test_count(self):
+        sample_0_length = len(set(anc for term in test_samples[0].phenotypic_features
+                                  for anc in hpo.graph.get_ancestors(term, include_source=True))
+                              - set(term for term in hpo.graph.get_ancestors("HP:0000118"))
+                              )
+        kernel = CountSimilarityKernel(hpo)
+        self.assertAlmostEqual(kernel.compute(test_samples[0], test_samples[0]).similarity,
+                               sample_0_length, 8)
+        # Test that passing terms with zero ic returns zero similarity
+        self.assertEqual(kernel.compute(test_samples[0], root_sample).similarity, 1)
+        self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 1)
+        test_sample_1 = Sample(phenotypic_features=hpo.graph.get_children("HP:0000118"), label="test", hpo=hpo)
+        test_sample_2 = Sample(phenotypic_features=[hpo.get_term("HP:0000152").identifier], label="test", hpo=hpo)
+        self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 2, 8)
 
     def test_phrank(self):
         # Phrank would normally takes the bayes_ic_dict as an argument, but we are using the delta_ic_dict for testing
