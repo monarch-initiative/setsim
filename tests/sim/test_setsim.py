@@ -112,10 +112,10 @@ class TestSumsim(unittest.TestCase):
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
-        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
         similarities_kernel = PhrankSimilaritiesKernel(disease=test_samples[3], hpo=hpo, bayes_ic_dict=bayes_ic_dict)
-        similarities_result = similarities_kernel.compute(test_samples[0])
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
@@ -134,10 +134,10 @@ class TestSumsim(unittest.TestCase):
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
-        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
         similarities_kernel = SimGicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, ic_dict=ic_dict)
-        similarities_result = similarities_kernel.compute(test_samples[0])
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
@@ -156,10 +156,10 @@ class TestSumsim(unittest.TestCase):
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
-        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
         similarities_kernel = SimCicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
-        similarities_result = similarities_kernel.compute(test_samples[0])
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
@@ -168,10 +168,10 @@ class TestSumsim(unittest.TestCase):
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
-        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
         similarities_kernel = SumSimSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
-        similarities_result = similarities_kernel.compute(test_samples[0])
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
@@ -180,10 +180,10 @@ class TestSumsim(unittest.TestCase):
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
-        similarity_results = [similarity_kernel.compute(s_iter, test_samples[3]).similarity for s_iter in
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
         similarities_kernel = JaccardSimilaritiesKernel(disease=test_samples[3], hpo=hpo)
-        similarities_result = similarities_kernel.compute(test_samples[0])
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
 
 

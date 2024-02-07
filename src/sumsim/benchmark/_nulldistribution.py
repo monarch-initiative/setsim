@@ -131,9 +131,10 @@ class GetNullDistribution(KernelIterator, metaclass=abc.ABCMeta):
                  kernel: SimilarityKernel = None,
                  method: str = None, mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
+                 bayes_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  precomputed_patients: Sequence[Phenotyped] = None):
-        KernelIterator.__init__(self, hpo, ic_dict, delta_ic_dict, mica_dict, root)
+        KernelIterator.__init__(self, hpo, ic_dict, delta_ic_dict, bayes_ic_dict, mica_dict, root)
         self.disease = disease
         self.method = method
         self.num_patients = num_patients

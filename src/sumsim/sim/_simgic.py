@@ -34,5 +34,6 @@ class SimGicSimilaritiesKernel(SetSimilaritiesKernel, SimGicSimilarity, metaclas
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)
+        ic_dict = {term.value: ic for term, ic in ic_dict.items()}
         WeightedSimilarity.__init__(self, ic_dict)
 

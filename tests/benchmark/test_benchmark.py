@@ -135,8 +135,8 @@ class TestBenchmark(unittest.TestCase):
                          results["Tom_sumsim_sim"].loc["Bill"])
         self.assertEqual(results["Bill_jaccard_sim"].loc["Tom"],
                          results["Tom_jaccard_sim"].loc["Bill"])
-        self.assertEqual(results["Bill_simgic_sim"].loc["Tom"],
-                         results["Tom_simgic_sim"].loc["Bill"])
+        self.assertAlmostEqual(results["Bill_simgic_sim"].loc["Tom"],
+                         results["Tom_simgic_sim"].loc["Bill"], 8)
         self.assertEqual(results["Bill_simcic_sim"].loc["Tom"],
                          results["Tom_simcic_sim"].loc["Bill"])
 

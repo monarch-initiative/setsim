@@ -96,7 +96,8 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
     def _normalization_method(self) -> typing.Literal["union", "reciprocal average", "none"]:
         pass
 
-    def _score_feature_sets(self, feature_sets: (typing.Set[hpotk.TermId], typing.Set[hpotk.TermId])) -> float:
+    def _score_feature_sets(self, feature_sets: (typing.Union[typing.Set[str], typing.Set[hpotk.TermId]],
+                                                 typing.Union[typing.Set[str], typing.Set[hpotk.TermId]])) -> float:
         intersection_score = self._score_feature_set(feature_sets[0].intersection(feature_sets[1]))
         if self._normalization_method() == "union":
             union_score = self._score_feature_set(feature_sets[0].union(feature_sets[1]))
@@ -107,7 +108,7 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
         return intersection_score
 
     @abc.abstractmethod
-    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
+    def _score_feature_set(self, feature_set: typing.Union[typing.Set[str], typing.Set[hpotk.TermId]]) -> float:
         pass
 
 
@@ -117,13 +118,13 @@ class WeightedSimilarity(SetSimilarityKernel, metaclass=abc.ABCMeta):
     of all pairs of phenotypic features.
     """
 
-    def __init__(self, ic_dict: typing.Mapping[hpotk.TermId, float]):
+    def __init__(self, ic_dict: typing.Mapping[typing.Union[str, hpotk.TermId], float]):
         self._ic_dict = ic_dict
 
-    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
+    def _score_feature_set(self, feature_set: typing.Set[typing.Union[str, hpotk.TermId]]) -> float:
         try:
             sim = sum(self._ic_dict.get(term, None) for term in feature_set)
-        except KeyError:
+        except TypeError:
             features = [feature for feature in feature_set if self._ic_dict.get(feature, None) is None]
             print(f'Samples share the following features which are not included in the provided dictionary:'
                   f'\n{features}')
@@ -132,7 +133,7 @@ class WeightedSimilarity(SetSimilarityKernel, metaclass=abc.ABCMeta):
 
 
 class SetSizeSimilarity(SetSimilarityKernel, metaclass=abc.ABCMeta):
-    def _score_feature_set(self, feature_set: typing.Set[hpotk.TermId]) -> float:
+    def _score_feature_set(self, feature_set: typing.Union[typing.Set[str], typing.Set[hpotk.TermId]]) -> float:
         return len(feature_set)
 
 
@@ -176,43 +177,48 @@ class SetSimilaritiesKernel(SimilaritiesKernel, SetSimilarityKernel, metaclass=a
         SimilaritiesKernel.__init__(self, disease)
         self._hpo = hpo.graph
         self._features_under_root = set(self._hpo.get_descendants(root, include_source=True))
-        self._ancestor_dict = {feature: set(anc for anc in self._hpo.get_ancestors(feature, include_source=True)
-                                            if anc in self._features_under_root)
-                               for feature in self._features_under_root}
+        self._ancestor_dict = {
+            feature.value: set(anc.value for anc in self._hpo.get_ancestors(feature, include_source=True)
+                               if anc in self._features_under_root)
+            for feature in self._features_under_root}
         self._disease_features = set(ancestor for pf in disease.phenotypic_features for ancestor in
-                                     self._ancestor_dict[pf] if pf in self._features_under_root)
+                                     self._ancestor_dict[pf.value] if pf in self._features_under_root)
 
     def _sample_iterator(self, sample: Phenotyped) -> typing.Iterable[typing.Set[hpotk.TermId]]:
         for pf in sample.phenotypic_features:
-            yield self._ancestor_dict.get(pf, set())
+            yield self._ancestor_dict.get(pf.value, set())
 
     def compute(self, sample: Phenotyped, return_last_result: bool = False) \
             -> typing.Union[typing.Sequence[float], float]:
         if len(sample.phenotypic_features) == 0:
             raise ValueError("Sample has no phenotypic features.")
         disease_leftovers = self._disease_features.copy()
-        union_set = {}
+        union_set = set()
         disease_score = 0.0
-        if self._normalization_method() == "reciprocal average":
+        normalization_method = self._normalization_method()
+        if normalization_method == "reciprocal average":
             disease_score = self._score_feature_set(self._disease_features)
-        elif self._normalization_method() == "union":
+        elif normalization_method == "union":
             union_set = disease_leftovers.copy()
         intersection_score = 0.0
+        union_score = self._score_feature_set(union_set)
         results = []
         for next_set in self._sample_iterator(sample):
-            intersection_score_addition = self._score_feature_set(next_set.intersection(disease_leftovers))
-            disease_leftovers = disease_leftovers.difference(next_set)
+            intersection_score_addition = self._score_feature_set(next_set & disease_leftovers)
+            disease_leftovers -= next_set
             intersection_score += intersection_score_addition
-            if self._normalization_method() == "none":
+            if normalization_method == "none":
                 results.append(intersection_score)
             else:
-                union_set = next_set.union(union_set)
-                if self._normalization_method() == "union":
-                    results.append(intersection_score / self._score_feature_set(union_set))
-                elif self._normalization_method() == "reciprocal average":
+                new_union_terms = next_set - union_set
+                union_set |= new_union_terms
+                union_score += self._score_feature_set(new_union_terms)
+                if normalization_method == "union":
+                    results.append(intersection_score / union_score)
+                elif normalization_method == "reciprocal average":
                     disease_weighted_score = intersection_score / disease_score
-                    sample_weighted_score = intersection_score / self._score_feature_set(union_set)
-                    results.append((disease_weighted_score + sample_weighted_score)/2)
+                    sample_weighted_score = intersection_score / union_score
+                    results.append((disease_weighted_score + sample_weighted_score) / 2)
         if return_last_result:
             return results[-1]
         return results

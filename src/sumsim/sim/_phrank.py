@@ -31,4 +31,5 @@ class PhrankSimilaritiesKernel(SetSimilaritiesKernel, PhrankSimilarity, metaclas
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, bayes_ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)
-        WeightedSimilarity.__init__(self, bayes_ic_dict)
+        ic_dict = {term.value: ic for term, ic in bayes_ic_dict.items()}
+        WeightedSimilarity.__init__(self, ic_dict)

@@ -8,6 +8,8 @@ import warnings
 
 from datetime import datetime
 from statistics import mean
+
+import pandas as pd
 from tqdm import tqdm
 
 import hpotk
@@ -168,7 +170,7 @@ class IcCalculator:
         if root_term is None:
             raise ValueError(f'Root {root} is not in provided HPO!')
         self._root = root_term.identifier
-        self._subontology_terms = set(self._hpo.get_descendants(self._root, include_source=True))
+        self._features_under_root = set(self._hpo.get_descendants(self._root, include_source=True))
 
         self._phenotypes = None
         self._phenotyped_terms = set()
@@ -202,25 +204,26 @@ class IcCalculator:
         if len(phenotypes) > len(self._phenotypes):
             excluded_phenotypes = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
             warnings.warn(f"The sample(s) {excluded_phenotypes} were removed because they have no features.")
-        self._phenotyped_array = get_phenotyped_array(self._phenotypes, self._hpo)
-        # Create a multiprocessing pool
-        pool = multiprocessing.Pool(processes=self._num_processes)
 
-        results = []
-        if self._progress_bar:
-            for result in tqdm(pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200),
-                               total=len(self._subontology_terms)):
-                results.append(result)
-        else:
-            for result in pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200):
-                results.append(result)
-
-        pool.close()
-        self.ic_dict = {key: value for key, value in results}
+        phenotyped_array = pd.DataFrame(columns=range(len(self._phenotypes)),
+                                        index=[term.value for term in self._features_under_root], dtype=bool)
+        phenotyped_array.iloc[:, :] = False
+        i = 0
+        for sample in phenotypes:
+            full_term_list = [term.value for term in
+                              (set(anc for term in sample.phenotypic_features
+                                   for anc in
+                                   self._hpo.get_ancestors(term, include_source=True)) & self._features_under_root)
+                              ]
+            phenotyped_array.loc[full_term_list, i] = True
+            i += 1
+        num_samples = len(self._phenotypes)
+        ic_values = phenotyped_array.sum(axis=1).apply(lambda x: math.log(num_samples / max(1, x))).tolist()
+        self.ic_dict = dict(zip(self._features_under_root, ic_values))
         return self.ic_dict
 
     def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
-        freq = max(1, sum(row[term.value] for row in self._phenotyped_array))
+        freq = max(1, self._phenotyped_array[:][term.value].sum())
         ic = math.log(len(self._phenotyped_array) / freq)
         return term, ic
 
@@ -246,7 +249,7 @@ class IcCalculator:
         if fragile_dict and not one_sided:
             raise ValueError("Fragile dictionary can only be used with one_sided=True.")
 
-        used_terms = self._subontology_terms
+        used_terms = self._features_under_root
         if terms_in_samples is None and samples is None:
             terms_in_samples = used_terms
         self._anc_dict = {term: used_terms.intersection(self._hpo.get_ancestors(term, include_source=True)) for term in
@@ -265,9 +268,9 @@ class IcCalculator:
         used_terms_list = list(terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                        include_source=True)))
         if one_sided:
-            term_pairs = itertools.product(used_terms_list, self._subontology_terms)
-            term_pairs_2 = itertools.product(used_terms_list, self._subontology_terms)
-            total = len(used_terms_list) * len(self._subontology_terms)
+            term_pairs = itertools.product(used_terms_list, self._features_under_root)
+            term_pairs_2 = itertools.product(used_terms_list, self._features_under_root)
+            total = len(used_terms_list) * len(self._features_under_root)
         else:
             term_pairs = itertools.combinations(used_terms_list, 2)
             term_pairs_2 = itertools.combinations(used_terms_list, 2)
@@ -297,7 +300,7 @@ class IcCalculator:
         @param hpoa_version:
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
-        used_terms = self._subontology_terms
+        used_terms = self._features_under_root
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
                           term in used_terms}
 
