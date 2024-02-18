@@ -11,12 +11,12 @@ from ._base import SimilarityKernel, SimilarityResult, OntoSetSimilarityKernel, 
     SetSimilaritiesKernel, WeightedSimilarity
 
 
-class SumSimSimilarity(WeightedSimilarity, metaclass=abc.ABCMeta):
+class SimIciSimilarity(WeightedSimilarity, metaclass=abc.ABCMeta):
     def _normalization_method(self):
         return "none"
 
 
-class SumSimSimilarityKernel(OntoSetSimilarityKernel, SumSimSimilarity, metaclass=abc.ABCMeta):
+class SimIciSimilarityKernel(OntoSetSimilarityKernel, SimIciSimilarity, metaclass=abc.ABCMeta):
     def __init__(self, hpo: hpotk.GraphAware, delta_ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         OntoSetSimilarityKernel.__init__(self, hpo, root)
@@ -28,7 +28,7 @@ class SumSimSimilarityKernel(OntoSetSimilarityKernel, SumSimSimilarity, metaclas
         return True
 
 
-class SumSimSimilaritiesKernel(SetSimilaritiesKernel, SumSimSimilarity, metaclass=abc.ABCMeta):
+class SimIciSimilaritiesKernel(SetSimilaritiesKernel, SimIciSimilarity, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, delta_ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)

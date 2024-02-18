@@ -13,7 +13,7 @@ from tqdm import tqdm
 from sumsim.model import DiseaseModel, Sample, Phenotyped
 from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
 from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGenerator
-from sumsim.sim import SumSimSimilarityKernel, IcCalculator, JaccardSimilarityKernel
+from sumsim.sim import SimIciSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
 class Benchmark(KernelIterator, metaclass=abc.ABCMeta):

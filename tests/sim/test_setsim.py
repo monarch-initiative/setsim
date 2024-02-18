@@ -10,14 +10,14 @@ from hpotk import MinimalOntology
 import sumsim
 from sumsim.model import Sample
 from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SumSimSimilarityKernel, JaccardSimilarityKernel
+from sumsim.sim import SimIciSimilarityKernel, JaccardSimilarityKernel
 from sumsim.sim import IcCalculator, IcTransformer
 from sumsim.sim._count import CountSimilarityKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
-from sumsim.sim._simcic import SimCicSimilarityKernel, SimCicSimilaritiesKernel
+from sumsim.sim._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
 from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
-from sumsim.sim._sumsim import SumSimSimilaritiesKernel
+from sumsim.sim._simici import SimIciSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -63,7 +63,7 @@ bayes_ic_dict = transformer.transform(ic_dict, strategy="bayesian")
 class TestSumsim(unittest.TestCase):
 
     def test_calculate_total_ic(self):
-        kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
+        kernel = SimIciSimilarityKernel(hpo, delta_ic_dict)
         root_ic = kernel._score_feature_sets(
             ({hpo.get_term("HP:0000118").identifier}, {hpo.get_term("HP:0000118").identifier}))
         self.assertAlmostEqual(root_ic, 0.0, 8)  # add assertion here
@@ -75,7 +75,7 @@ class TestSumsim(unittest.TestCase):
                                  f'{kernel._score_feature_sets((term_ancestors, term_ancestors))}.\n Term ancestors: {term_ancestors}')
 
     def test_get_all_shared_features(self):
-        kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
+        kernel = SimIciSimilarityKernel(hpo, delta_ic_dict)
         matt_bill_overlap_ids = ['HP:0000118',
                                  'HP:0033127',
                                  'HP:0040064',
@@ -118,7 +118,7 @@ class TestSumsim(unittest.TestCase):
         # Phrank would normally takes the bayes_ic_dict as an argument, but we are using the delta_ic_dict for testing
         # since it should behave exactly like sumsim when given the delta_ic_dict
         kernel_phrank = PhrankSimilarityKernel(hpo, bayes_ic_dict=delta_ic_dict)
-        kernel_sumsim = SumSimSimilarityKernel(hpo, delta_ic_dict=delta_ic_dict)
+        kernel_sumsim = SimIciSimilarityKernel(hpo, delta_ic_dict=delta_ic_dict)
         for i_sample in test_samples:
             self.assertEqual(kernel_phrank.compute(i_sample, test_samples[0]).similarity,
                              kernel_sumsim.compute(i_sample, test_samples[0]).similarity)
@@ -168,25 +168,25 @@ class TestSumsim(unittest.TestCase):
         self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 1 / 11, 8)
 
     def test_simcicimilarities(self):
-        similarity_kernel = SimCicSimilarityKernel(hpo, delta_ic_dict)
+        similarity_kernel = SimGciSimilarityKernel(hpo, delta_ic_dict)
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
         similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
-        similarities_kernel = SimCicSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
+        similarities_kernel = SimGciSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
         similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
 
     def test_sumsimsimilarities(self):
-        similarity_kernel = SumSimSimilarityKernel(hpo, delta_ic_dict)
+        similarity_kernel = SimIciSimilarityKernel(hpo, delta_ic_dict)
         toms_features = test_samples[0].phenotypic_features
         sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
                             for i in range(1, len(toms_features) + 1)]
         similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
                               sample_iteration]
-        similarities_kernel = SumSimSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
+        similarities_kernel = SimIciSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
         similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
         self.assertEqual(similarity_results, similarities_result)
         self.assertEqual(similarities_kernel.compute(root_sample), [0.0])

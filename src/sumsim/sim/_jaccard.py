@@ -1,15 +1,12 @@
 import abc
 import re
-import typing
 
 from collections import namedtuple
-from typing import Set
 
 import hpotk
 
 from sumsim.model import Phenotyped
-from ._base import SimilarityKernel, SimilarityResult, SetSimilarityKernel, OntoSetSimilarityKernel, \
-    SetSimilaritiesKernel, SetSizeSimilarity
+from ._base import OntoSetSimilarityKernel, SetSimilaritiesKernel, SetSizeSimilarity
 
 HPO_PATTERN = re.compile(r"HP:(?P<ID>\d{7})")
 

@@ -11,14 +11,14 @@ from tqdm import tqdm
 
 from sumsim.model import Sample, DiseaseModel, Phenotyped
 from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SumSimSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
+from sumsim.sim import SimIciSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
 from sumsim.sim._base import SimilaritiesKernel
 from sumsim.sim._count import CountSimilaritiesKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilaritiesKernel
-from sumsim.sim._simcic import SimCicSimilaritiesKernel
+from sumsim.sim._simgci import SimGciSimilaritiesKernel
 from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
-from sumsim.sim._sumsim import SumSimSimilaritiesKernel
+from sumsim.sim._simici import SimIciSimilaritiesKernel
 from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
 from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
 
@@ -84,9 +84,9 @@ class KernelIterator:
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
             if method == "sumsim":
-                kernel = SumSimSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+                kernel = SimIciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
             else:
-                kernel = SimCicSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+                kernel = SimGciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
         elif method == "phrank":
             if self.bayes_ic_dict is None:
                 raise ValueError("bayes_ic_dict must be provided for phrank method.")
