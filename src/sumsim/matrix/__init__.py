@@ -1,2 +1,2 @@
 from ._nulldistribution import PatientGenerator, GetNullDistribution
-from ._benchmark import Benchmark
+from ._similaritymatrix import SimilarityMatrix

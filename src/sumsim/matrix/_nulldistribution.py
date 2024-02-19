@@ -9,18 +9,18 @@ import hpotk
 import numpy as np
 from tqdm import tqdm
 
-from sumsim.model import Sample, DiseaseModel, Phenotyped
+from sumsim.model import DiseaseModel, Phenotyped
 from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SimIciSimilarityKernel, SimilarityKernel, IcCalculator, JaccardSimilarityKernel
+from sumsim.sim import SimilarityKernel, IcCalculator
 from sumsim.sim._base import SimilaritiesKernel
-from sumsim.sim._count import CountSimilaritiesKernel
-from sumsim.sim._jaccard import JaccardSimilaritiesKernel
-from sumsim.sim._phrank import PhrankSimilaritiesKernel
-from sumsim.sim._roxas import RoxasSimilaritiesKernel
-from sumsim.sim._simgci import SimGciSimilaritiesKernel
-from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
-from sumsim.sim._simici import SimIciSimilaritiesKernel
-from sumsim.sim.phenomizer import OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure, TermPair
+from sumsim.sim import CountSimilaritiesKernel
+from sumsim.sim import JaccardSimilaritiesKernel
+from sumsim.sim import PhrankSimilaritiesKernel
+from sumsim.sim import RoxasSimilaritiesKernel
+from sumsim.sim import SimGciSimilaritiesKernel
+from sumsim.sim import SimGicSimilaritiesKernel
+from sumsim.sim import SimIciSimilaritiesKernel
+from sumsim.sim.phenomizer import TermPair
 from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
 
 
@@ -81,12 +81,14 @@ class KernelIterator:
 
     def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
-        if method in ["sumsim", "simcic", "roxas"]:
+        if method in ["simici", "sumsim", "simgci", "roxas"]:
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
-            if method == "sumsim":
+            if method == "simici" or method == "sumsim":
+                if method == "sumsim":
+                    DeprecationWarning("The name of SumSim method has been changed to SimICI.")
                 kernel = SimIciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
-            elif method == "simcic":
+            elif method == "simgci":
                 kernel = SimGciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
             elif method == "roxas":
                 kernel = RoxasSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
@@ -111,7 +113,7 @@ class KernelIterator:
             else:
                 temp_mica_dict = self._make_fragile_mica_ic(disease, self.mica_dict)
             kernel = PhenomizerSimilaritiesKernel(disease, temp_mica_dict, use_fragile_mica_dict=True)
-        elif method == "jaccard":
+        elif method == "jaccard" or method == "simui":
             kernel = JaccardSimilaritiesKernel(disease, self.hpo, self.root)
         elif method == "count":
             kernel = CountSimilaritiesKernel(disease, self.hpo, self.root)

@@ -9,3 +9,4 @@ from ._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
 from ._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from ._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
 from ._count import CountSimilarityKernel, CountSimilaritiesKernel
+from ._roxas import RoxasSimilaritiesKernel

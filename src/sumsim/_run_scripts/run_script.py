@@ -56,19 +56,19 @@ print(
     f'The noisy samples (with 10 random common terms added) have an average of {mean([len(sample.phenotypic_features) for sample in noisy_samples])} terms after removing ancestors and duplicates.')
 
 # Run Benchmarking
-from sumsim.benchmark import Benchmark
+from sumsim.matrix import SimilarityMatrix
 
-b_mark = Benchmark(hpo=hp,
-                   chunksize=10,
-                   delta_ic_dict=delta_ic_dict,
-                   ic_dict=ic_dict,
-                   n_iter_distribution=null_dist_samples,
-                   num_cpus=num_cpus,
-                   num_features_distribution=num_features,
-                   patients=samples + noisy_samples,
-                   similarity_methods=methods,
-                   multiprocess=True
-                   )
+b_mark = SimilarityMatrix(hpo=hp,
+                          chunksize=10,
+                          delta_ic_dict=delta_ic_dict,
+                          ic_dict=ic_dict,
+                          n_iter_distribution=null_dist_samples,
+                          num_cpus=num_cpus,
+                          num_features_distribution=num_features,
+                          patients=samples + noisy_samples,
+                          similarity_methods=methods,
+                          multiprocess=True
+                          )
 results = b_mark.compute_diagnostic_similarities(diseases[:500])  # or whatever slice we want
 export_name = f'benchmark_results_m_{methods}_ndist_{null_dist_samples}_nfeatures_{num_features}.csv'
 results.to_csv(export_name)

@@ -16,7 +16,7 @@ from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGener
 from sumsim.sim import SimIciSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
-class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
+class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
     def __init__(self, hpo: hpotk.MinimalOntology, patients: Sequence[Sample], n_iter_distribution: int,
                  num_features_distribution: int, similarity_methods: Sequence[str],
                  mica_dict: typing.Mapping[TermPair, float] = None,
@@ -80,23 +80,24 @@ class Benchmark(KernelIterator, metaclass=abc.ABCMeta):
         patient_dict = {}
         if self.multiprocess:
             with multiprocessing.Pool(processes=self.num_cpus) as pool:
-                disease_dicts = pool.imap_unordered(self._rank_across_methods, samples, chunksize=self.chunksize)
+                disease_dicts = pool.imap_unordered(self._compute_across_methods, samples, chunksize=self.chunksize)
                 for result in tqdm(disease_dicts, total=len(samples), desc="Diseases"):
                     patient_dict = {**patient_dict, **result}
         else:
             for disease in tqdm(samples, total=len(samples), desc="Diseases"):
-                patient_dict = {**patient_dict, **self._rank_across_methods(disease)}
+                patient_dict = {**patient_dict, **self._compute_across_methods(disease)}
         self.patient_table = pd.concat([self.patient_table, pd.DataFrame(patient_dict, index=self.patient_table.index)],
                                        axis=1)
         return self.patient_table
 
-    def _rank_across_methods(self, sample: typing.Union[DiseaseModel, Sample]) -> typing.Mapping[str, typing.List[float]]:
+    def _compute_across_methods(self, sample: typing.Union[DiseaseModel, Sample])\
+            -> typing.Mapping[str, typing.List[float]]:
         patient_dict = {}
         for method in self.similarity_methods:
-            patient_dict = {**patient_dict, **self._rank_patients(method, sample)}
+            patient_dict = {**patient_dict, **self._compute_across_patients(method, sample)}
         return patient_dict
 
-    def _rank_patients(self, similarity_method: str, sample: typing.Union[DiseaseModel, Sample]):
+    def _compute_across_patients(self, similarity_method: str, sample: typing.Union[DiseaseModel, Sample]):
         kernel = self._define_kernel(sample, similarity_method)
         # Get Column Names
         if type(sample) is DiseaseModel:
