@@ -15,6 +15,7 @@ from sumsim.sim import IcCalculator, IcTransformer
 from sumsim.sim._count import CountSimilarityKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
+from sumsim.sim._roxas import RoxasSimilarityKernel, RoxasSimilaritiesKernel
 from sumsim.sim._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
 from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from sumsim.sim._simici import SimIciSimilaritiesKernel
@@ -113,6 +114,29 @@ class TestSumsim(unittest.TestCase):
         test_sample_1 = Sample(phenotypic_features=hpo.graph.get_children("HP:0000118"), label="test", hpo=hpo)
         test_sample_2 = Sample(phenotypic_features=[hpo.get_term("HP:0000152").identifier], label="test", hpo=hpo)
         self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 2, 8)
+
+    def test_roxas(self):
+        kernel = RoxasSimilarityKernel(hpo, delta_ic_dict)
+        self.assertAlmostEqual(kernel.compute(test_samples[0], test_samples[0]).similarity, 1.0, 8)
+        # Test that passing terms with zero ic returns zero similarity
+        self.assertEqual(kernel.compute(test_samples[0], root_sample).similarity, 0.0)
+        self.assertEqual(kernel.compute(root_sample, root_sample).similarity, 0.0)
+        test_sample_1 = Sample(phenotypic_features=hpo.graph.get_children("HP:0000118"), label="test", hpo=hpo)
+        test_sample_2 = Sample(phenotypic_features=[hpo.get_term("HP:0000152").identifier], label="test", hpo=hpo)
+        self.assertAlmostEqual(kernel.compute(test_sample_1, test_sample_2).similarity, 6/11, 8)
+
+    def test_roxassimilarities(self):
+        similarity_kernel = RoxasSimilarityKernel(hpo, delta_ic_dict)
+        toms_features = test_samples[0].phenotypic_features
+        sample_iteration = [FastPhenotyped(phenotypic_features=toms_features[:i])
+                            for i in range(1, len(toms_features) + 1)]
+        similarity_results = [round(similarity_kernel.compute(s_iter, test_samples[3]).similarity, 8) for s_iter in
+                              sample_iteration]
+        similarities_kernel = RoxasSimilaritiesKernel(disease=test_samples[3], hpo=hpo, delta_ic_dict=delta_ic_dict)
+        similarities_result = [round(ic, 8) for ic in similarities_kernel.compute(test_samples[0])]
+        self.assertEqual(similarity_results, similarities_result)
+        self.assertEqual(similarities_kernel.compute(root_sample), [0.0])
+
 
     def test_phrank(self):
         # Phrank would normally takes the bayes_ic_dict as an argument, but we are using the delta_ic_dict for testing

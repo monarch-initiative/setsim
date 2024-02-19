@@ -16,6 +16,7 @@ from sumsim.sim._base import SimilaritiesKernel
 from sumsim.sim._count import CountSimilaritiesKernel
 from sumsim.sim._jaccard import JaccardSimilaritiesKernel
 from sumsim.sim._phrank import PhrankSimilaritiesKernel
+from sumsim.sim._roxas import RoxasSimilaritiesKernel
 from sumsim.sim._simgci import SimGciSimilaritiesKernel
 from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from sumsim.sim._simici import SimIciSimilaritiesKernel
@@ -80,13 +81,15 @@ class KernelIterator:
 
     def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
-        if method in ["sumsim", "simcic"]:
+        if method in ["sumsim", "simcic", "roxas"]:
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
             if method == "sumsim":
                 kernel = SimIciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
-            else:
+            elif method == "simcic":
                 kernel = SimGciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
+            elif method == "roxas":
+                kernel = RoxasSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
         elif method == "phrank":
             if self.bayes_ic_dict is None:
                 raise ValueError("bayes_ic_dict must be provided for phrank method.")

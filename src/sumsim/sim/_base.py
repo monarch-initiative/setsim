@@ -105,6 +105,13 @@ class SetSimilarityKernel(SimilarityKernel, metaclass=abc.ABCMeta):
                 return 0.0
             else:
                 return intersection_score / self._score_feature_set(feature_sets[0].union(feature_sets[1]))
+        elif self._normalization_method() == "reciprocal average":
+            sample_1_score = self._score_feature_set(feature_sets[0])
+            sample_2_score = self._score_feature_set(feature_sets[1])
+            if sample_1_score == 0 or sample_2_score == 0:
+                return 0.0
+            else:
+                return (intersection_score / sample_1_score + intersection_score / sample_2_score) / 2
         return intersection_score
 
     @abc.abstractmethod
@@ -216,9 +223,12 @@ class SetSimilaritiesKernel(SimilaritiesKernel, SetSimilarityKernel, metaclass=a
                 if normalization_method == "union":
                     results.append(intersection_score / union_score)
                 elif normalization_method == "reciprocal average":
-                    disease_weighted_score = intersection_score / disease_score
-                    sample_weighted_score = intersection_score / union_score
-                    results.append((disease_weighted_score + sample_weighted_score) / 2)
+                    if disease_score == 0 or union_score == 0:
+                        results.append(0.0)
+                    else:
+                        disease_weighted_score = intersection_score / disease_score
+                        sample_weighted_score = intersection_score / union_score
+                        results.append((disease_weighted_score + sample_weighted_score) / 2)
         if return_last_result:
             return results[-1]
         return results
