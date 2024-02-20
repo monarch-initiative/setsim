@@ -23,5 +23,16 @@
         "label": "Tubularization of Bowman capsule"
       }
     }
+  ],
+    "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:3456789"
+        }
+      }
+    }
   ]
 }

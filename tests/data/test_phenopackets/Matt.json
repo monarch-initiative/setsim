@@ -11,5 +11,16 @@
         "label": "Lytic defects of radial metaphysis"
       }
     }
+  ],
+    "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:2345678"
+        }
+      }
+    }
   ]
 }

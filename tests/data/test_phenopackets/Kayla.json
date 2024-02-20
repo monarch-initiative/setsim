@@ -11,5 +11,16 @@
         "label": "Broad radius"
       }
     }
+  ],
+    "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:1234567"
+        }
+      }
+    }
   ]
 }

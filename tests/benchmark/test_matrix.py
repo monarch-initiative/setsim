@@ -68,7 +68,8 @@ class TestFragileMicaKernel(unittest.TestCase):
 
 class TestBenchmark(unittest.TestCase):
 
-    def setUp(self):
+
+    def test_matrix(self):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
@@ -77,10 +78,7 @@ class TestBenchmark(unittest.TestCase):
                                      similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank",
                                                          "simgci",
                                                          "count"])
-        self.results = benchmark.compute_diagnostic_similarities([disease])
-
-    def test_matrix(self):
-        results = self.results
+        results = benchmark.compute_diagnostic_similarities([disease])
         self.assertTrue(results["MONDO_1234567_simici_pval"].loc["Tom"] <
                         results["MONDO_1234567_simici_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_simici_sim"].loc["Tom"] >
@@ -147,8 +145,19 @@ class TestBenchmark(unittest.TestCase):
         self.assertEqual(results["Bill_simgci_sim"].loc["Tom"],
                          results["Tom_simgci_sim"].loc["Bill"])
 
-        def test_rank(self):
-            mrank = Rank(self.results)
+    def test_rank(self):
+        disease_id = [TermId.from_curie("MONDO:1234567"), TermId.from_curie("MONDO:2345678")]
+        disease_features = [[TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]],
+                            [TermId.from_curie(term) for term in ["HP:0004026"]]]
+        diseases = [DiseaseModel(disease_id[i], f"Test_Disease_{i}", disease_features[i], hpo) for i in range(2)]
+        benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+                                     delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
+                                     similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank",
+                                                         "simgci",
+                                                         "count"])
+        results = benchmark.compute_diagnostic_similarities(diseases)
+        mrank = Rank(results)
+        mrank.rank()
 
 
 if __name__ == '__main__':
