@@ -17,3 +17,5 @@ class Rank:
         if len(self.diseases) == len(set(self.diseases)):
             raise ValueError("Matrix contains duplicate diseases.")
         self.matrix = matrix
+
+

@@ -9,6 +9,7 @@ from pkg_resources import resource_filename
 import sumsim
 from sumsim.matrix import PatientGenerator, SimilarityMatrix, GetNullDistribution
 from sumsim.matrix._nulldistribution import KernelIterator
+from sumsim.matrix._rank import Rank
 from sumsim.model import DiseaseModel
 from sumsim.sim import IcCalculator, IcTransformer
 from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
@@ -66,15 +67,20 @@ class TestFragileMicaKernel(unittest.TestCase):
 
 
 class TestBenchmark(unittest.TestCase):
-    def test_benchmark(self):
+
+    def setUp(self):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
         benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                      delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
-                                     similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank", "simgci",
-                                                  "count"])
-        results = benchmark.compute_diagnostic_similarities([disease])
+                                     similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank",
+                                                         "simgci",
+                                                         "count"])
+        self.results = benchmark.compute_diagnostic_similarities([disease])
+
+    def test_matrix(self):
+        results = self.results
         self.assertTrue(results["MONDO_1234567_simici_pval"].loc["Tom"] <
                         results["MONDO_1234567_simici_pval"].loc["Bill"])
         self.assertTrue(results["MONDO_1234567_simici_sim"].loc["Tom"] >
@@ -140,6 +146,9 @@ class TestBenchmark(unittest.TestCase):
                          results["Tom_simgic_sim"].loc["Bill"], 8)
         self.assertEqual(results["Bill_simgci_sim"].loc["Tom"],
                          results["Tom_simgci_sim"].loc["Bill"])
+
+        def test_rank(self):
+            mrank = Rank(self.results)
 
 
 if __name__ == '__main__':
