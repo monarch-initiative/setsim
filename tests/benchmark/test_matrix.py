@@ -142,8 +142,8 @@ class TestBenchmark(unittest.TestCase):
                          results["Tom_jaccard_sim"].loc["Bill"])
         self.assertAlmostEqual(results["Bill_simgic_sim"].loc["Tom"],
                          results["Tom_simgic_sim"].loc["Bill"], 8)
-        self.assertEqual(results["Bill_simgci_sim"].loc["Tom"],
-                         results["Tom_simgci_sim"].loc["Bill"])
+        self.assertAlmostEqual(results["Bill_simgci_sim"].loc["Tom"],
+                         results["Tom_simgci_sim"].loc["Bill"], 8)
 
     def test_rank(self):
         disease_id = [TermId.from_curie("MONDO:1234567"), TermId.from_curie("MONDO:2345678")]

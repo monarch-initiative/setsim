@@ -51,6 +51,25 @@ class Rank:
                 self.rankings[f"{method}_pval_rank"] = rp_matrix.apply(lambda row:
                                                                        row[f'{row["disease_id"]}_{method}_sim'], axis=1)
 
+    def get_graphable(self, suffix_variable: str = None, max_term_num: int = None):
+        if suffix_variable is not None:
+            self.rankings[suffix_variable] = [True if suffix_variable in idx else False for idx in self.rankings.index]
+        if max_term_num is not None:
+            graphable = pd.melt(self.rankings.loc[self.rankings["num_terms"] <= max_term_num].iloc[:, 2:], id_vars=suffix_variable)
+        else:
+            graphable = pd.melt(self.rankings.iloc[:, 2:], id_vars=suffix_variable)
+        graphable["Test"] = graphable["variable"].str.split("_", expand=True)[1]
+        if suffix_variable is not None:
+            self.rankings.drop(columns=[suffix_variable], inplace=True)
+            graphable["Test"].loc[graphable[suffix_variable]] = [f"{test} & {suffix_variable}" for test in
+                                                                 graphable["Test"].loc[graphable[suffix_variable]]]
+        graphable["variable"] = graphable["variable"].str.split("_", expand=True)[0]
+        graphable["variable"] = graphable["variable"].str.capitalize()
+        graphable["variable"] = [algo[:-3] + algo[-3:].upper()
+                                 if algo.startswith("Sim") else algo for algo in graphable["variable"]]
+        graphable.columns = [suffix_variable.capitalize(), "Similarity Method", "Rank", "Test"]
+        return graphable
+
     def get_rankings(self):
         return self.rankings
 
