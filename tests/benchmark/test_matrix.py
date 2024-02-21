@@ -147,7 +147,7 @@ class TestBenchmark(unittest.TestCase):
 
     def test_rank(self):
         disease_id = [TermId.from_curie("MONDO:1234567"), TermId.from_curie("MONDO:2345678")]
-        disease_features = [[TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]],
+        disease_features = [[TermId.from_curie(term) for term in ["HP:0004021", "HP:0004026", "HP:0032648"]],
                             [TermId.from_curie(term) for term in ["HP:0004026"]]]
         diseases = [DiseaseModel(disease_id[i], f"Test_Disease_{i}", disease_features[i], hpo) for i in range(2)]
         benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
@@ -158,6 +158,9 @@ class TestBenchmark(unittest.TestCase):
         results = benchmark.compute_diagnostic_similarities(diseases)
         mrank = Rank(results)
         mrank.rank()
+        rankings = mrank.get_rankings()
+        self.assertEqual(rankings.loc["Tom", ~rankings.columns.isin(["disease_id", "num_features"])].mean(), 1)
+        self.assertEqual(len(rankings.columns), 16)
 
 
 if __name__ == '__main__':

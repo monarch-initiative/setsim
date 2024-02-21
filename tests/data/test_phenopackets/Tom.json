@@ -30,7 +30,7 @@
       "progressStatus": "SOLVED",
       "diagnosis": {
         "disease": {
-          "id": "MONDO:3456789"
+          "id": "MONDO:1234567"
         }
       }
     }

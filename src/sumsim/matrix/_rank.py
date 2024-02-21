@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 
 
@@ -18,13 +20,37 @@ class Rank:
             raise ValueError("Matrix contains duplicate diseases.")
         self.matrix = matrix
         self.matrix.iloc[:, 0] = self.matrix.iloc[:, 0].astype(str).str.replace(":", "_")
-
+        keep_index = [True if diagnosis in self.diseases else False for diagnosis in self.matrix.iloc[:, 0]]
+        drop_index = [not idx for idx in keep_index]
+        if not all(keep_index):
+            drop_patients = self.matrix.index[drop_index].tolist()
+            missing_diseases = set(self.matrix.iloc[drop_index, 0].tolist())
+            warnings.warn(f"Removing {len(drop_patients)} patient(s) with a diagnosis not in the matrix.\n"
+                          f"Removed patients: {drop_patients}\n"
+                          f"Missing diagnoses: {missing_diseases}")
+            self.matrix = self.matrix[keep_index]
+            self.rankings = self.matrix.iloc[:, :2]
 
     def rank(self):
-        #print(self.matrix.iloc[:, 0])
-        #self.rankings = pd.DataFrame(index=self.matrix.index)
         for method in self.methods:
             r_matrix = self.matrix[[col for col in self.sims if method in col]].rank(axis=1, ascending=False)
-            print(r_matrix)
+            r_matrix["disease_id"] = self.matrix.iloc[:, 0]
+            self.rankings[f"{method}_sim_rank"] = r_matrix.apply(lambda row: row[f'{row["disease_id"]}_{method}_sim'],
+                                                                 axis=1)
+            if len(self.pvals) > 0:
+                rp_matrix = self.matrix[[col for col in self.pvals if method in col]].rank(axis=1, ascending=True)
 
+                # Columns need to match the names of the similarity columns to be able to add them together.
+                rp_matrix.columns = [col.replace("_pval", "_sim") for col in rp_matrix.columns]
+
+                # Adding similarity rank from similarity to break ties. Similarity rank is divided by the total number
+                # of diseases + 1 to prevent the rank from changing more than 1.
+                rp_matrix = rp_matrix + r_matrix.loc[:, r_matrix.columns != "disease_id"] / (len(self.diseases) + 1)
+                rp_matrix = rp_matrix.rank(axis=1, ascending=True)
+                rp_matrix["disease_id"] = self.matrix.iloc[:, 0]
+                self.rankings[f"{method}_pval_rank"] = rp_matrix.apply(lambda row:
+                                                                       row[f'{row["disease_id"]}_{method}_sim'], axis=1)
+
+    def get_rankings(self):
+        return self.rankings
 

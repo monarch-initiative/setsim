@@ -26,7 +26,7 @@ class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  multiprocess: bool = True,
                  num_cpus: int = None,
-                 chunksize: int = 1, verbose: bool = False,
+                 chunksize: int = 1, verbose: bool = True,
                  avoid_max_ic_for_null_patients: bool = False):
         KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                 delta_ic_dict=delta_ic_dict, root=root)
