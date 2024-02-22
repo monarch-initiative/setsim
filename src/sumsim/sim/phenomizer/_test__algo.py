@@ -8,7 +8,9 @@ import hpotk
 
 from sumsim.model import Sample
 
-from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimilarityMeasure
+from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimilarityMeasure, OneSidedSemiPhenomizer, \
+    PhenomizerSimilaritiesKernel
+from ...model._base import FastPhenotyped
 
 test_data = resource_filename(__name__, '../../../../tests/data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -30,7 +32,7 @@ class PhenomizerTest(unittest.TestCase):
                            #
                            phenotypic_features=map_to_phenotypic_features(('HP:0004021', 'HP:0004026')),
                            hpo=hpo)
-        #print(list(patient_a.phenotypic_features))
+        # print(list(patient_a.phenotypic_features))
 
         patient_b = Sample(label='B',
                            #
@@ -44,6 +46,22 @@ class PhenomizerTest(unittest.TestCase):
         patient_b = Sample(label='B', phenotypic_features=map_to_phenotypic_features([]), hpo=hpo)
         similarity = self.phenomizer.compute(patient_a, patient_b)
         self.assertAlmostEqual(similarity.similarity, 0., delta=1E-9)
+
+    def test_similarities(self):
+        mica_dict = PhenomizerTest._create_mica_dict()
+        similarity_kernel = OneSidedSemiPhenomizer(PrecomputedIcMicaSimilarityMeasure(mica_dict))
+        disease = FastPhenotyped(phenotypic_features=map_to_phenotypic_features(('HP:0004021', 'HP:0004026')))
+        sample = Sample(label='test',
+                        phenotypic_features=map_to_phenotypic_features(('HP:0004021', 'HP:0003981', 'HP:0003856')),
+                        hpo=hpo)
+        sample_features = list(sample.phenotypic_features)
+        sample_iteration = [FastPhenotyped(phenotypic_features=sample_features[:i])
+                            for i in range(1, len(sample_features) + 1)]
+        similarity_results = [similarity_kernel.compute(s_iter, disease).similarity for s_iter in
+                              sample_iteration]
+        similarities_kernel = PhenomizerSimilaritiesKernel(disease=disease, mica_dict=mica_dict)
+        similarities_result = similarities_kernel.compute(sample)
+        self.assertEqual(similarity_results, similarities_result)
 
     @staticmethod
     def _create_mica_dict():

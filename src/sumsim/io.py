@@ -13,6 +13,7 @@ from typing import Sequence, Tuple, List, Any
 from google.protobuf.json_format import Parse
 from google.protobuf.message import Message
 from hpotk import TermId
+from hpotk.annotations.load.hpoa import SimpleHpoaDiseaseLoader
 from phenopackets import Phenopacket, Cohort
 
 from sumsim.model import Sample, DiseaseModel
@@ -112,7 +113,8 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
                          f'but received {type(fh)}')
 
 
-def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, root: str = "HP:0000118", return_gene2phe: bool = False,
+def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, root: str = "HP:0000118",
+                           return_gene2phe: bool = False,
                            verbose: bool = False) \
         -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
     if not verbose:
@@ -131,4 +133,21 @@ def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, root: str = "H
         diseases.append(DiseaseModel(TermId.from_curie(disease), "", list_ids, hpo))
     if return_gene2phe:
         return diseases, gene2phe
+    return diseases
+
+
+def read_hpoa(fpath: str, hpo: hpotk.MinimalOntology, root: str = "HP:0000118", include_non_omim=False, include_diseases_without_phenotypes=False) \
+        -> Sequence[DiseaseModel]:
+    terms_under_root = set(hpo.graph.get_descendants(root, include_source=True))
+    annotator = SimpleHpoaDiseaseLoader(hpo)
+    disease_annotations = annotator.load(fpath)
+    diseases = []
+    for annotation in disease_annotations:
+        if "OMIM" in annotation.identifier.value or include_non_omim:
+            phenotypic_features = [pf.identifier for pf in annotation.annotations if pf.identifier in terms_under_root]
+            if len(phenotypic_features) == 0 and not include_diseases_without_phenotypes:
+                continue
+            new_disease = DiseaseModel(identifier=annotation.identifier, label=annotation.name,
+                                       phenotypic_features=phenotypic_features, hpo=hpo)
+            diseases.append(new_disease)
     return diseases

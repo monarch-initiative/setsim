@@ -69,6 +69,18 @@ class DiseaseIdentifier(hpotk.model.Identified, hpotk.model.Named):
         return str(self)
 
 
+class FastPhenotyped(Phenotyped):
+    """
+    `FastPhenotyped` can be used to speed up the computation of the similarity between two entities.
+    """
+    def __init__(self, phenotypic_features: typing.Iterable[hpotk.TermId]):
+        self._pfs = tuple(phenotypic_features)
+
+    @property
+    def phenotypic_features(self) -> typing.Sequence[hpotk.TermId]:
+        return self._pfs
+
+
 class Sample(Phenotyped, Labeled):
     """
     `Sample` describes the requirements for the subject data, as far as C2S2 is concerned.
@@ -79,7 +91,7 @@ class Sample(Phenotyped, Labeled):
                  hpo: hpotk.GraphAware,
                  disease_identifier: typing.Optional[DiseaseIdentifier] = None):
         self._label = label
-        self._pfs = remove_ancestors(phenotypic_features, hpo, self._label)
+        self._pfs = remove_ancestors(phenotypic_features, hpo)
         self._di = disease_identifier
 
     @property
@@ -125,7 +137,7 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
                  hpo: hpotk.GraphAware):
         self._id = identifier
         self._label = label
-        self._pfs = remove_ancestors(phenotypic_features, hpo, self._label)
+        self._pfs = remove_ancestors(phenotypic_features, hpo)
 
     @property
     def identifier(self) -> TermId:
@@ -149,10 +161,10 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
                 f'phenotypic_features={self._pfs})')
 
 
-def remove_ancestors(features: typing.Iterable[hpotk.TermId], hpo: hpotk.GraphAware, label: str):
+def remove_ancestors(features: typing.Iterable[hpotk.TermId], hpo: hpotk.GraphAware):
     features = list(features)
+    # TODO allow termids to be entered as strings. Currently if strings are given, no error is raised and they are
+    #  passed without removing ancestors.
     ancestor_features = set(ancestor for pf in features for ancestor in hpo.graph.get_ancestors(pf))
     drop_features = [feature for feature in features if feature in ancestor_features]
-    if bool(drop_features):
-        warnings.warn(f'Sample ({label}) has the following ancestors removed: {drop_features}')
     return tuple(feature for feature in features if feature not in drop_features)

@@ -8,6 +8,8 @@ import warnings
 
 from datetime import datetime
 from statistics import mean
+
+import pandas as pd
 from tqdm import tqdm
 
 import hpotk
@@ -26,7 +28,7 @@ class IcTransformer:
     """
 
     def __init__(self, hpo: hpotk.MinimalOntology,
-                 root: typing.Union[str, hpotk.TermId] = "HP:0000118"):
+                 root: typing.Union[str, hpotk.TermId] = "HP:0000118", samples: typing.Sequence[Phenotyped] = None):
         self._hpo = hpotk.util.validate_instance(hpo, hpotk.MinimalOntology, 'hpo')
         # As a side effect of getting the term and using its identifier,
         # we ensure `self._root` corresponds to an ID of current (non-obsolete) term for given HPO version.
@@ -34,6 +36,10 @@ class IcTransformer:
         if root_term is None:
             raise ValueError(f'Root {root} is not in provided HPO!')
         self._root = root_term.identifier
+        if samples is not None:
+            self._samples = [sample for sample in samples if len(sample.phenotypic_features) > 0]
+        else:
+            self._samples = None
 
     def transform(self, ic_dict: typing.Mapping[hpotk.TermId, float],
                   strategy: str = 'mean') -> typing.Mapping[hpotk.TermId, float]:
@@ -49,6 +55,8 @@ class IcTransformer:
             return self._use_mean(ic_dict)
         elif strategy == 'max':
             return self._use_max(ic_dict)
+        elif strategy == 'bayesian':
+            return self._use_bayesian(ic_dict)
         else:
             raise ValueError(f'Unknown strategy {strategy}')
 
@@ -72,6 +80,29 @@ class IcTransformer:
             else:
                 parent_ic = 0
             delta_ic_dict[term_id] = term_ic - parent_ic
+        return delta_ic_dict
+
+    def _use_bayesian(self, ic_dict: typing.Mapping[hpotk.TermId, float]):
+        if self._samples is None:
+            raise ValueError("Bayesian calculation requires samples or diseases used for IC dictionary creation.")
+        phenotyped_array = get_phenotyped_array(self._samples, self._hpo.graph)
+        delta_ic_dict = {}
+        for term_id, term_ic in ic_dict.items():
+            if term_id != self._root:
+                parents = list(self._hpo.graph.get_parents(term_id))
+                if len(parents) > 1:
+                    relevant_parents = [i.value for i in set(parents).intersection(ic_dict.keys())]
+                    parent_freq = sum(1 if any(row[relevant_parents]) else 0 for row in phenotyped_array)
+                    term_freq = sum(row[term_id.value] for row in phenotyped_array)
+                    if term_freq == 0:
+                        term_freq = 1
+                    if parent_freq == 0:
+                        parent_freq = 1
+                    delta_ic_dict[term_id] = math.log(parent_freq / term_freq)
+                else:
+                    delta_ic_dict[term_id] = term_ic - ic_dict.get(parents[0], 0)
+            else:
+                delta_ic_dict[term_id] = term_ic
         return delta_ic_dict
 
 
@@ -128,6 +159,7 @@ class IcCalculator:
 
     def __init__(self, hpo: hpotk.MinimalOntology,
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
+                 multiprocess: bool = True,
                  num_processes: int = None,
                  progress_bar: bool = False):
         self._hpo = hpo.graph
@@ -138,13 +170,14 @@ class IcCalculator:
         if root_term is None:
             raise ValueError(f'Root {root} is not in provided HPO!')
         self._root = root_term.identifier
-        self._subontology_terms = set(self._hpo.get_descendants(self._root, include_source=True))
+        self._features_under_root = set(self._hpo.get_descendants(self._root, include_source=True))
 
         self._phenotypes = None
         self._phenotyped_terms = set()
         self._phenotyped_array = None
         self.ic_dict = None
         self._anc_dict = None  # used for calculating mica_ic_dict
+        self.multiprocess = multiprocess
         if num_processes is None:
             num_processes = max(multiprocessing.cpu_count() - 2, 1)
         self._num_processes = num_processes
@@ -171,36 +204,33 @@ class IcCalculator:
         if len(phenotypes) > len(self._phenotypes):
             excluded_phenotypes = [phenotype for phenotype in phenotypes if phenotype not in self._phenotypes]
             warnings.warn(f"The sample(s) {excluded_phenotypes} were removed because they have no features.")
-        self._phenotyped_array = self._get_phenotyped_array(self._phenotypes, self._phenotyped_terms)
-        # Create a multiprocessing pool
-        pool = multiprocessing.Pool(processes=self._num_processes)
 
-        results = []
-        if self._progress_bar:
-            for result in tqdm(pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200),
-                               total=len(self._subontology_terms)):
-                results.append(result)
-        else:
-            for result in pool.imap(self._get_term_ic, self._subontology_terms, chunksize=200):
-                results.append(result)
-
-        pool.close()
-        self.ic_dict = {key: value for key, value in results}
+        phenotyped_array = pd.DataFrame(columns=range(len(self._phenotypes)),
+                                        index=[term.value for term in self._features_under_root], dtype=bool)
+        phenotyped_array.iloc[:, :] = False
+        i = 0
+        for sample in phenotypes:
+            full_term_list = [term.value for term in
+                              (set(anc for term in sample.phenotypic_features
+                                   for anc in
+                                   self._hpo.get_ancestors(term, include_source=True)) & self._features_under_root)
+                              ]
+            phenotyped_array.loc[full_term_list, i] = True
+            i += 1
+        num_samples = len(self._phenotypes)
+        ic_values = phenotyped_array.sum(axis=1).apply(lambda x: math.log(num_samples / max(1, x))).tolist()
+        self.ic_dict = dict(zip(self._features_under_root, ic_values))
         return self.ic_dict
 
     def _get_term_ic(self, term: hpotk.TermId) -> (hpotk.TermId, float):
-        term_descendants = set(i for i in self._hpo.get_descendants(term, include_source=True))
-        relevant_descendants = [i.value for i in term_descendants.intersection(self._phenotyped_terms)]
-        if len(relevant_descendants) > 0:
-            freq = sum(1 if any(row[relevant_descendants]) else 0 for row in self._phenotyped_array)
-        else:
-            freq = 1
+        freq = max(1, self._phenotyped_array[:][term.value].sum())
         ic = math.log(len(self._phenotyped_array) / freq)
         return term, ic
 
     def create_mica_ic_dict(self, terms_in_samples: typing.Set[hpotk.TermId] = None,
-                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None, one_sided: bool = False) \
-            -> typing.Mapping[TermPair, float]:
+                            samples: typing.Sequence[Phenotyped] = None, ic_dict=None, one_sided: bool = False,
+                            fragile_dict=False) \
+            -> typing.Union[typing.Mapping[TermPair, float], typing.Mapping[typing.Tuple[int, int], float]]:
         """
         Create a dictionary that goes from TermPairs to MICA IC to be used for a specific instance of phenomizer. The
         dictionary requires only the terms that are annotated in the samples being analyzed. (It is not necessary to
@@ -216,8 +246,10 @@ class IcCalculator:
         instances that already have an ic_dict stored.
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
+        if fragile_dict and not one_sided:
+            raise ValueError("Fragile dictionary can only be used with one_sided=True.")
 
-        used_terms = self._subontology_terms
+        used_terms = self._features_under_root
         if terms_in_samples is None and samples is None:
             terms_in_samples = used_terms
         self._anc_dict = {term: used_terms.intersection(self._hpo.get_ancestors(term, include_source=True)) for term in
@@ -236,20 +268,25 @@ class IcCalculator:
         used_terms_list = list(terms_in_samples.intersection(self._hpo.get_descendants(self._root,
                                                                                        include_source=True)))
         if one_sided:
-            term_pairs = itertools.product(used_terms_list, self._subontology_terms)
-            term_pairs_2 = itertools.product(used_terms_list, self._subontology_terms)
-            total = len(used_terms_list) * len(self._subontology_terms)
+            term_pairs = itertools.product(used_terms_list, self._features_under_root)
+            term_pairs_2 = itertools.product(used_terms_list, self._features_under_root)
+            total = len(used_terms_list) * len(self._features_under_root)
         else:
             term_pairs = itertools.combinations(used_terms_list, 2)
             term_pairs_2 = itertools.combinations(used_terms_list, 2)
             total = len(used_terms_list) * (len(used_terms_list) - 1) // 2
         ic_list = self._create_mica_ic_list(term_pairs, total)
-
-        # Create matched set
-        matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in used_terms_list}
-
-        # Combine the dictionaries into a single dictionary
-        mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
+        if fragile_dict:
+            # Create matched set
+            matched_dict = {(int(term.id), int(term.id)): self.ic_dict[term] for term in used_terms_list}
+            # Combine the dictionaries into a single dictionary
+            mica_dict = {(int(term[0].id), int(term[1].id)): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
+            return {**matched_dict, **mica_dict}
+        else:
+            # Create matched set
+            matched_dict = {TermPair.of(term, term): self.ic_dict[term] for term in used_terms_list}
+            # Combine the dictionaries into a single dictionary
+            mica_dict = {TermPair.of(term[0], term[1]): ic for term, ic in zip(term_pairs_2, ic_list) if ic > 0}
         return {**matched_dict, **mica_dict}
 
     def create_mica_ic_dict_file(self, file_path: str, ic_dict=None, hpoa_version: str = "N/A") -> None:
@@ -263,7 +300,7 @@ class IcCalculator:
         @param hpoa_version:
         @return: Return a dictionary of TermPairs to MICA IC of that pair.
         """
-        used_terms = self._subontology_terms
+        used_terms = self._features_under_root
         self._anc_dict = {term: used_terms.intersection(set(self._hpo.get_ancestors(term, include_source=True))) for
                           term in used_terms}
 
@@ -286,16 +323,19 @@ class IcCalculator:
         return None
 
     def _create_mica_ic_list(self, term_pairs, total) -> typing.Sequence[str]:
-        # Create a multiprocessing pool
-        with multiprocessing.Pool(processes=self._num_processes) as pool:
-            if self._progress_bar:
-                # Use list comprehension with imap to get the results
-                ic_list = [ic for ic in
-                           tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
-                                desc="Calculating IC of MICA for term pairs")]
-            else:
-                # Use list comprehension with imap to get the results
-                ic_list = [ic for ic in pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6)]
+        if self.multiprocess:
+            # Create a multiprocessing pool
+            with multiprocessing.Pool(processes=self._num_processes) as pool:
+                if self._progress_bar:
+                    # Use list comprehension with imap to get the results
+                    ic_list = [ic for ic in
+                               tqdm(pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6), total=total,
+                                    desc="Calculating IC of MICA for term pairs")]
+                else:
+                    # Use list comprehension with imap to get the results
+                    ic_list = [ic for ic in pool.imap(self._get_mica_ic, term_pairs, chunksize=10 ** 6)]
+        else:
+            ic_list = [self._get_mica_ic(term_pair) for term_pair in term_pairs]
         return ic_list
 
     def _get_mica_ic(self, term_pair: typing.Sequence[hpotk.TermId]) -> float:
@@ -332,16 +372,18 @@ class IcCalculator:
         print(f"CSV file '{file_path}' has been created.")
         return None
 
-    @staticmethod
-    def _get_phenotyped_array(phenotypes: typing.Sequence[Phenotyped],
-                              used_pheno_abn: typing.Iterable[hpotk.TermId]) -> np.array:
-        # Convert hpotk.TermID to string for array index
-        array_type = [(col.value, bool) for col in used_pheno_abn]
-        array = np.zeros(len(phenotypes), dtype=array_type)
-        i = 0
-        for sample in phenotypes:
-            for term in sample.phenotypic_features:
-                if term in used_pheno_abn:
-                    array[term.value][i] = True
-            i = i + 1
-        return array
+
+def get_phenotyped_array(phenotypes: typing.Sequence[Phenotyped],
+                         hpo: hpotk.MinimalOntology.graph) -> np.array:
+    # Convert hpotk.TermID to string for array index
+    used_pheno_abn = set(hpo.get_descendants("HP:0000118", include_source=True))
+    array_type = [(col.value, bool) for col in used_pheno_abn]
+    array = np.zeros(len(phenotypes), dtype=array_type)
+    i = 0
+    for sample in phenotypes:
+        for term in sample.phenotypic_features:
+            for ancestor in hpo.get_ancestors(term, include_source=True):
+                if ancestor in used_pheno_abn:
+                    array[ancestor.value][i] = True
+        i = i + 1
+    return array
