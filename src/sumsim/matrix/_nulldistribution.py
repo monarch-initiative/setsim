@@ -81,6 +81,7 @@ class KernelIterator:
 
     def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
+        method = method.lower()
         if method in ["simici", "sumsim", "simgci", "roxas"]:
             if self.delta_ic_dict is None:
                 raise ValueError("delta_ic_dict must be provided for sumsim method.")
