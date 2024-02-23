@@ -24,10 +24,12 @@ class Rank:
         drop_index = [not idx for idx in keep_index]
         if not all(keep_index):
             drop_patients = self.matrix.index[drop_index].tolist()
-            missing_diseases = set(self.matrix.iloc[drop_index, 0].tolist())
-            warnings.warn(f"Removing {len(drop_patients)} patient(s) with a diagnosis not in the matrix.\n"
-                          f"Removed patients: {drop_patients}\n"
-                          f"Missing diagnoses: {missing_diseases}")
+            keep_patients = self.matrix.index[keep_index].tolist()
+            self.missing_diseases = set(self.matrix.iloc[drop_index, 0].tolist())
+            print(f"Removing {len(drop_patients)}  patients with a diagnosis not in the matrix.\n"
+                  f"Keeping {len(keep_patients)} patients.\n"
+                  f"There are {len(self.missing_diseases)} missing diagnoses.\n")
+            self.drop_patients = drop_patients
             self.matrix = self.matrix[keep_index]
             self.rankings = self.matrix.iloc[:, :2]
 
@@ -55,7 +57,10 @@ class Rank:
         if suffix_variable is not None:
             self.rankings[suffix_variable] = [True if suffix_variable in idx else False for idx in self.rankings.index]
         if max_term_num is not None:
-            graphable = pd.melt(self.rankings.loc[self.rankings["num_features"] <= max_term_num].iloc[:, 2:], id_vars=suffix_variable)
+            temp_df = self.rankings.loc[self.rankings["num_features"] <= max_term_num].iloc[:, 2:]
+            print(f"Removing {len(self.rankings) - len(temp_df)} patients with more than {max_term_num} terms.\n"
+                  f"Keeping {len(temp_df)} patients.\n")
+            graphable = pd.melt(temp_df, id_vars=suffix_variable)
         else:
             graphable = pd.melt(self.rankings.iloc[:, 2:], id_vars=suffix_variable)
         graphable["Test"] = graphable["variable"].str.split("_", expand=True)[1]
@@ -73,3 +78,8 @@ class Rank:
     def get_rankings(self):
         return self.rankings
 
+    def get_unknown_diagnoses(self):
+        return self.missing_diseases
+
+    def get_patients_with_unknown_diagnosis(self):
+        return self.drop_patients
