@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import warnings
 from warnings import filterwarnings
 
 import hpotk
@@ -66,15 +67,26 @@ def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sampl
                   disease_identifier=diagnosis)
 
 
-def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, verbose: bool = False) -> Sequence[Sample]:
-    if not verbose:
+def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, ignore_warnings: bool = False, recursive: bool = False) -> Sequence[Sample]:
+    if ignore_warnings:
         filterwarnings("ignore")
     samples = []
-    for filename in os.listdir(fpath_pp):
-        if filename.endswith(".json"):
-            file_path = os.path.join(fpath_pp, filename)
-            if os.path.isfile(file_path):
-                samples.append(read_phenopacket(file_path, hpo))
+    if recursive:
+        for root, dirs, files in os.walk(fpath_pp):
+            for filename in files:
+                if filename.endswith(".json"):
+                    file_path = os.path.join(root, filename)
+                    if os.path.isfile(file_path):
+                        try:
+                            samples.append(read_phenopacket(file_path, hpo))
+                        except Exception:
+                            warnings.warn(f"Could not read phenopacket from {file_path}")
+    else:
+        for filename in os.listdir(fpath_pp):
+            if filename.endswith(".json"):
+                file_path = os.path.join(fpath_pp, filename)
+                if os.path.isfile(file_path):
+                    samples.append(read_phenopacket(file_path, hpo))
     return samples
 
 

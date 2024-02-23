@@ -19,7 +19,7 @@ class Rank:
         if len(self.diseases) != len(set(self.diseases)):
             raise ValueError("Matrix contains duplicate diseases.")
         self.matrix = matrix
-        self.matrix.iloc[:, 0] = self.matrix.iloc[:, 0].astype(str).str.replace(":", "_")
+        self.matrix.iloc[:, 0] = self.matrix.iloc[:, 0].astype(str).str.replace(":", "_").str.replace(" ", "")
         keep_index = [True if diagnosis in self.diseases else False for diagnosis in self.matrix.iloc[:, 0]]
         drop_index = [not idx for idx in keep_index]
         if not all(keep_index):
@@ -55,7 +55,7 @@ class Rank:
         if suffix_variable is not None:
             self.rankings[suffix_variable] = [True if suffix_variable in idx else False for idx in self.rankings.index]
         if max_term_num is not None:
-            graphable = pd.melt(self.rankings.loc[self.rankings["num_terms"] <= max_term_num].iloc[:, 2:], id_vars=suffix_variable)
+            graphable = pd.melt(self.rankings.loc[self.rankings["num_features"] <= max_term_num].iloc[:, 2:], id_vars=suffix_variable)
         else:
             graphable = pd.melt(self.rankings.iloc[:, 2:], id_vars=suffix_variable)
         graphable["Test"] = graphable["variable"].str.split("_", expand=True)[1]
