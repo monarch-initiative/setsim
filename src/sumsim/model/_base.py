@@ -161,10 +161,12 @@ class DiseaseModel(hpotk.model.Identified, Labeled, Phenotyped):
                 f'phenotypic_features={self._pfs})')
 
 
-def remove_ancestors(features: typing.Iterable[hpotk.TermId], hpo: hpotk.GraphAware):
+def remove_ancestors(features: typing.Iterable[typing.Union[hpotk.TermId, str]], hpo: hpotk.GraphAware):
     features = list(features)
-    # TODO allow termids to be entered as strings. Currently if strings are given, no error is raised and they are
-    #  passed without removing ancestors.
+    if len(features) == 0:
+        return tuple()
+    if type(features[0]) is str:
+        features = [TermId.from_curie(feature) for feature in features]
     ancestor_features = set(ancestor for pf in features for ancestor in hpo.graph.get_ancestors(pf))
     drop_features = [feature for feature in features if feature in ancestor_features]
     return tuple(feature for feature in features if feature not in drop_features)

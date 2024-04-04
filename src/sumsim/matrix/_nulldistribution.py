@@ -1,5 +1,4 @@
 import abc
-import multiprocessing
 import typing
 import random
 import warnings
@@ -7,7 +6,6 @@ from typing import Sequence
 
 import hpotk
 import numpy as np
-from tqdm import tqdm
 
 from sumsim.model import DiseaseModel, Phenotyped
 from sumsim.model._base import FastPhenotyped

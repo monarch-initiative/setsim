@@ -2,7 +2,6 @@ import io
 import logging
 import os
 import warnings
-from warnings import filterwarnings
 
 import hpotk
 import pandas as pd
@@ -67,9 +66,7 @@ def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sampl
                   disease_identifier=diagnosis)
 
 
-def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, ignore_warnings: bool = False, recursive: bool = False) -> Sequence[Sample]:
-    if ignore_warnings:
-        filterwarnings("ignore")
+def read_folder(fpath_pp: str, hpo: hpotk.GraphAware, recursive: bool = False) -> Sequence[Sample]:
     samples = []
     if recursive:
         for root, dirs, files in os.walk(fpath_pp):
@@ -126,11 +123,8 @@ def read_protobuf_message(fh: typing.Union[typing.IO, str], message: MESSAGE, en
 
 
 def read_gene_to_phenotype(fpath_g2p: str, hpo: hpotk.GraphAware, root: str = "HP:0000118",
-                           return_gene2phe: bool = False,
-                           verbose: bool = False) \
+                           return_gene2phe: bool = False) \
         -> typing.Union[typing.Tuple[Sequence[DiseaseModel], typing.Mapping[Any, set]], Sequence[DiseaseModel]]:
-    if not verbose:
-        filterwarnings("ignore")
     subontology_terms = set(i.value for i in hpo.graph.get_descendants(root, include_source=True))
     df_g2ph = pd.read_csv(fpath_g2p, sep='\t', header=0)
     disease2phe = defaultdict(list)

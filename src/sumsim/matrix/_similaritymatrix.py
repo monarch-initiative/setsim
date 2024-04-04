@@ -1,7 +1,6 @@
 import abc
 import multiprocessing
 import warnings
-from warnings import filterwarnings
 
 import pandas as pd
 import typing
@@ -10,10 +9,9 @@ from typing import Sequence
 import hpotk
 from tqdm import tqdm
 
-from sumsim.model import DiseaseModel, Sample, Phenotyped
-from sumsim.sim.phenomizer import TermPair, OneSidedSemiPhenomizer, PrecomputedIcMicaSimilarityMeasure
+from sumsim.model import DiseaseModel, Sample
+from sumsim.sim.phenomizer import TermPair
 from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGenerator
-from sumsim.sim import SimIciSimilarityKernel, IcCalculator, JaccardSimilarityKernel
 
 
 class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
@@ -26,7 +24,7 @@ class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
                  root: typing.Union[str, hpotk.TermId] = "HP:0000118",
                  multiprocess: bool = True,
                  num_cpus: int = None,
-                 chunksize: int = 1, verbose: bool = True,
+                 chunksize: int = 1,
                  avoid_max_ic_for_null_patients: bool = False):
         KernelIterator.__init__(self, hpo=hpo, mica_dict=mica_dict, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                 delta_ic_dict=delta_ic_dict, root=root)
@@ -51,8 +49,6 @@ class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
         else:
             p_gen = PatientGenerator(self.hpo, self.n_iter_distribution, self.num_features_distribution, self.root)
         self.precomputed_patients = [patient for patient in p_gen.generate()]
-        if not verbose:
-            filterwarnings("ignore")
 
     def compute_diagnostic_similarities(self, diseases: Sequence[DiseaseModel]):
         contains_disease_zero_features = False
