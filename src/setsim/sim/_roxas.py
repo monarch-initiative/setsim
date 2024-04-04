@@ -1,26 +1,28 @@
 import abc
 import typing
 from abc import ABC
-
 import hpotk
-
 from typing import Set
-
-from sumsim.model import Phenotyped
+from setsim.model import Phenotyped
 from ._base import SimilarityKernel, SimilarityResult, OntoSetSimilarityKernel, SetSimilarityKernel, \
     SetSimilaritiesKernel, WeightedSimilarity
 
 
-class SimIciSimilarity(WeightedSimilarity, metaclass=abc.ABCMeta):
+class RoxasSimilarity(WeightedSimilarity, metaclass=abc.ABCMeta):
+    """
+    `SumSimilarity` is a base class for similarity kernels that calculate similarity by summing the similarity
+    of all pairs of phenotypic features.
+    """
+
     def _normalization_method(self):
-        return "none"
+        return "reciprocal average"
 
 
-class SimIciSimilarityKernel(OntoSetSimilarityKernel, SimIciSimilarity, metaclass=abc.ABCMeta):
+class RoxasSimilarityKernel(OntoSetSimilarityKernel, RoxasSimilarity):
     def __init__(self, hpo: hpotk.GraphAware, delta_ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         OntoSetSimilarityKernel.__init__(self, hpo, root)
-        WeightedSimilarity.__init__(self, delta_ic_dict)
+        RoxasSimilarity.__init__(self, delta_ic_dict)
 
     @property
     def is_symmetric(self) -> bool:
@@ -28,7 +30,7 @@ class SimIciSimilarityKernel(OntoSetSimilarityKernel, SimIciSimilarity, metaclas
         return True
 
 
-class SimIciSimilaritiesKernel(SetSimilaritiesKernel, SimIciSimilarity, metaclass=abc.ABCMeta):
+class RoxasSimilaritiesKernel(SetSimilaritiesKernel, RoxasSimilarity, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, delta_ic_dict: typing.Mapping[hpotk.TermId, float],
                  root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)

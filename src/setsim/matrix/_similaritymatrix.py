@@ -9,8 +9,8 @@ from typing import Sequence
 import hpotk
 from tqdm import tqdm
 
-from sumsim.model import DiseaseModel, Sample
-from sumsim.sim.phenomizer import TermPair
+from setsim.model import DiseaseModel, Sample
+from setsim.sim.phenomizer import TermPair
 from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGenerator
 
 

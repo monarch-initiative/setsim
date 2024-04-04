@@ -7,19 +7,19 @@ from typing import Sequence
 import hpotk
 import numpy as np
 
-from sumsim.model import DiseaseModel, Phenotyped
-from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SimilarityKernel, IcCalculator
-from sumsim.sim._base import SimilaritiesKernel
-from sumsim.sim import CountSimilaritiesKernel
-from sumsim.sim import JaccardSimilaritiesKernel
-from sumsim.sim import PhrankSimilaritiesKernel
-from sumsim.sim import RoxasSimilaritiesKernel
-from sumsim.sim import SimGciSimilaritiesKernel
-from sumsim.sim import SimGicSimilaritiesKernel
-from sumsim.sim import SimIciSimilaritiesKernel
-from sumsim.sim.phenomizer import TermPair
-from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
+from setsim.model import DiseaseModel, Phenotyped
+from setsim.model._base import FastPhenotyped
+from setsim.sim import SimilarityKernel, IcCalculator
+from setsim.sim._base import SimilaritiesKernel
+from setsim.sim import CountSimilaritiesKernel
+from setsim.sim import JaccardSimilaritiesKernel
+from setsim.sim import PhrankSimilaritiesKernel
+from setsim.sim import RoxasSimilaritiesKernel
+from setsim.sim import SimGciSimilaritiesKernel
+from setsim.sim import SimGicSimilaritiesKernel
+from setsim.sim import SimIciSimilaritiesKernel
+from setsim.sim.phenomizer import TermPair
+from setsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
 
 
 class PatientGenerator:
@@ -80,11 +80,11 @@ class KernelIterator:
     def _define_kernel(self, disease, method) \
             -> typing.Union[SimilaritiesKernel, SimilarityKernel]:
         method = method.lower()
-        if method in ["simici", "sumsim", "simgci", "roxas"]:
+        if method in ["simici", "setsim", "simgci", "roxas"]:
             if self.delta_ic_dict is None:
-                raise ValueError("delta_ic_dict must be provided for sumsim method.")
-            if method == "simici" or method == "sumsim":
-                if method == "sumsim":
+                raise ValueError("delta_ic_dict must be provided for setsim method.")
+            if method == "simici" or method == "setsim":
+                if method == "setsim":
                     DeprecationWarning("The name of SumSim method has been changed to SimICI.")
                 kernel = SimIciSimilaritiesKernel(disease, self.hpo, self.delta_ic_dict, self.root)
             elif method == "simgci":

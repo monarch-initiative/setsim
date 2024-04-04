@@ -1,7 +1,7 @@
 import abc
 import typing
 import hpotk
-from sumsim.model import Phenotyped
+from setsim.model import Phenotyped
 from . import OntoSetSimilarityKernel, SetSimilaritiesKernel, WeightedSimilarity
 
 

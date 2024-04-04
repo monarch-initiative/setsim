@@ -14,8 +14,8 @@ from tqdm import tqdm
 
 import hpotk
 
-from sumsim.model import Sample, Phenotyped, DiseaseModel
-from sumsim.sim.phenomizer import TermPair
+from setsim.model import Sample, Phenotyped, DiseaseModel
+from setsim.sim.phenomizer import TermPair
 
 
 class IcTransformer:

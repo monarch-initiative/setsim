@@ -6,7 +6,7 @@ import hpotk
 
 from typing import Mapping
 
-from sumsim.model import Phenotyped
+from setsim.model import Phenotyped
 
 from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult, SimilaritiesKernel
 from ._io import TermPair

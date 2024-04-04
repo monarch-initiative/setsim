@@ -7,18 +7,18 @@ from pkg_resources import resource_filename
 import hpotk
 from hpotk import MinimalOntology
 
-import sumsim
-from sumsim.model import Sample
-from sumsim.model._base import FastPhenotyped
-from sumsim.sim import SimIciSimilarityKernel, JaccardSimilarityKernel
-from sumsim.sim import IcCalculator, IcTransformer
-from sumsim.sim._count import CountSimilarityKernel
-from sumsim.sim._jaccard import JaccardSimilaritiesKernel
-from sumsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
-from sumsim.sim._roxas import RoxasSimilarityKernel, RoxasSimilaritiesKernel
-from sumsim.sim._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
-from sumsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
-from sumsim.sim._simici import SimIciSimilaritiesKernel
+import setsim
+from setsim.model import Sample
+from setsim.model._base import FastPhenotyped
+from setsim.sim import SimIciSimilarityKernel, JaccardSimilarityKernel
+from setsim.sim import IcCalculator, IcTransformer
+from setsim.sim._count import CountSimilarityKernel
+from setsim.sim._jaccard import JaccardSimilaritiesKernel
+from setsim.sim._phrank import PhrankSimilarityKernel, PhrankSimilaritiesKernel
+from setsim.sim._roxas import RoxasSimilarityKernel, RoxasSimilaritiesKernel
+from setsim.sim._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
+from setsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
+from setsim.sim._simici import SimIciSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
@@ -28,7 +28,7 @@ root_sample = Sample(phenotypic_features=[hpo.get_term("HP:0000118").identifier]
 empty_sample = Sample(phenotypic_features=[], label="Empty", hpo=hpo)
 
 # test_phenopackets has five samples with Four Terms
-temp_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
+temp_samples = setsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
 test_samples = list(temp_samples)
 for sample in temp_samples:
     if sample.label == "Tom":
@@ -140,7 +140,7 @@ class TestSumsim(unittest.TestCase):
 
     def test_phrank(self):
         # Phrank would normally takes the bayes_ic_dict as an argument, but we are using the delta_ic_dict for testing
-        # since it should behave exactly like sumsim when given the delta_ic_dict
+        # since it should behave exactly like setsim when given the delta_ic_dict
         kernel_phrank = PhrankSimilarityKernel(hpo, bayes_ic_dict=delta_ic_dict)
         kernel_sumsim = SimIciSimilarityKernel(hpo, delta_ic_dict=delta_ic_dict)
         for i_sample in test_samples:

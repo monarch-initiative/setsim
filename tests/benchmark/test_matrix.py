@@ -6,20 +6,20 @@ from hpotk import MinimalOntology, TermId
 
 from pkg_resources import resource_filename
 
-import sumsim
-from sumsim.matrix import PatientGenerator, SimilarityMatrix, GetNullDistribution
-from sumsim.matrix._nulldistribution import KernelIterator
-from sumsim.matrix._rank import Rank
-from sumsim.model import DiseaseModel
-from sumsim.sim import IcCalculator, IcTransformer
-from sumsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
+import setsim
+from setsim.matrix import PatientGenerator, SimilarityMatrix, GetNullDistribution
+from setsim.matrix._nulldistribution import KernelIterator
+from setsim.matrix._rank import Rank
+from setsim.model import DiseaseModel
+from setsim.sim import IcCalculator, IcTransformer
+from setsim.sim.phenomizer._algo import PhenomizerSimilaritiesKernel
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
+test_samples = setsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
 test_samples = [sample for sample in test_samples if sample.label != "Jed"]
 
 # Generate IC dictionary

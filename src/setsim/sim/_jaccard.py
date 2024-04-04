@@ -1,15 +1,12 @@
 import abc
 import re
-import typing
 
 from collections import namedtuple
-from typing import Set
 
 import hpotk
 
-from sumsim.model import Phenotyped
-from ._base import SimilarityKernel, SimilarityResult, SetSimilarityKernel, OntoSetSimilarityKernel, \
-    SetSimilaritiesKernel, SetSizeSimilarity
+from setsim.model import Phenotyped
+from ._base import OntoSetSimilarityKernel, SetSimilaritiesKernel, SetSizeSimilarity
 
 HPO_PATTERN = re.compile(r"HP:(?P<ID>\d{7})")
 
@@ -19,17 +16,17 @@ An implementation detail for Jaccard kernels.
 """
 
 
-class CountSimilarity(SetSizeSimilarity, metaclass=abc.ABCMeta):
+class JaccardSimilarity(SetSizeSimilarity, metaclass=abc.ABCMeta):
     """
     `SumSimilarity` is a base class for similarity kernels that calculate similarity by summing the similarity
     of all pairs of phenotypic features.
     """
 
     def _normalization_method(self):
-        return "none"
+        return "union"
 
 
-class CountSimilarityKernel(OntoSetSimilarityKernel, CountSimilarity, metaclass=abc.ABCMeta):
+class JaccardSimilarityKernel(OntoSetSimilarityKernel, JaccardSimilarity, metaclass=abc.ABCMeta):
     """
     `JaccardSimilarityKernel` uses *both* present and excluded phenotypic features to calculate the similarity.
 
@@ -55,6 +52,6 @@ class CountSimilarityKernel(OntoSetSimilarityKernel, CountSimilarity, metaclass=
         return True
 
 
-class CountSimilaritiesKernel(SetSimilaritiesKernel, CountSimilarity, metaclass=abc.ABCMeta):
+class JaccardSimilaritiesKernel(SetSimilaritiesKernel, JaccardSimilarity, metaclass=abc.ABCMeta):
     def __init__(self, disease: Phenotyped, hpo: hpotk.GraphAware, root: str = "HP:0000118"):
         SetSimilaritiesKernel.__init__(self, disease, hpo, root)

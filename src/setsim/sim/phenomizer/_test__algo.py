@@ -6,7 +6,7 @@ from pkg_resources import resource_filename
 
 import hpotk
 
-from sumsim.model import Sample
+from setsim.model import Sample
 
 from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimilarityMeasure, OneSidedSemiPhenomizer, \
     PhenomizerSimilaritiesKernel

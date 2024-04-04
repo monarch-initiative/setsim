@@ -16,9 +16,9 @@ from hpotk import TermId
 from hpotk.annotations.load.hpoa import SimpleHpoaDiseaseLoader
 from phenopackets import Phenopacket, Cohort
 
-from sumsim.model import Sample, DiseaseModel
-from sumsim.model import DiseaseModel
-from sumsim.model._base import DiseaseIdentifier
+from setsim.model import Sample, DiseaseModel
+from setsim.model import DiseaseModel
+from setsim.model._base import DiseaseIdentifier
 
 # A generic type for a Protobuf message
 MESSAGE = typing.TypeVar('MESSAGE', bound=Message)
@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 def read_phenopacket(phenopacket: typing.Union[Phenopacket, typing.IO, str], hpo: hpotk.GraphAware) -> Sample:
     """
-    Read Phenopacket into a `sumsim.model.Sample`.
+    Read Phenopacket into a `setsim.model.Sample`.
 
     :param phenopacket: a Phenopacket object, path to a phenopacket JSON file, or an IO wrapper.
     :param hpo: Ontology to use to remove ancestors
-    :return: the parsed `sumsim.model.Sample`.
+    :return: the parsed `setsim.model.Sample`.
     :raises: IOError in case of IO issues or a ValueError if the input is not a proper `Phenopacket`
     """
     if not isinstance(phenopacket, Message):
@@ -42,7 +42,7 @@ def read_phenopacket(phenopacket: typing.Union[Phenopacket, typing.IO, str], hpo
 
 def _parse_phenopacket(phenopacket: Phenopacket, hpo: hpotk.GraphAware) -> Sample:
     """
-    Extract the relevant parts of a `Phenopacket` into `sumsim.model.Sample`. The function uses `subject.id` for
+    Extract the relevant parts of a `Phenopacket` into `setsim.model.Sample`. The function uses `subject.id` for
     the `sample.identifier` and the `type.id` and `excluded` attributes of phenopacket's `PhenotypicFeature`s
     for `sample.phenotypic_features`.
 

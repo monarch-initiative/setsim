@@ -6,7 +6,7 @@ import hpotk
 
 from typing import Set
 
-from sumsim.model import Phenotyped
+from setsim.model import Phenotyped
 from ._base import OntoSetSimilarityKernel, SetSimilaritiesKernel, WeightedSimilarity
 
 

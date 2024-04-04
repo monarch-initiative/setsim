@@ -4,7 +4,7 @@ from abc import ABC
 
 import hpotk
 
-from sumsim.model import Phenotyped
+from setsim.model import Phenotyped
 
 
 class SimilarityMeasureResult:
@@ -47,7 +47,7 @@ class SimilarityMeasure(metaclass=abc.ABCMeta):
 
 class SimilarityResult:
     """
-    Container to hold similarity between a pair of :class:`sumsim.model.Phenotyped` entities
+    Container to hold similarity between a pair of :class:`setsim.model.Phenotyped` entities
     calculated by a :class:`SimilarityKernel`.
     """
 

@@ -8,16 +8,16 @@ import hpotk
 from hpotk import MinimalOntology
 from hpotk import TermId
 
-import sumsim
-from sumsim.sim import IcCalculator, IcTransformer
-from sumsim.sim.phenomizer import TermPair
+import setsim
+from setsim.sim import IcCalculator, IcTransformer
+from setsim.sim.phenomizer import TermPair
 
 test_data = resource_filename(__name__, '../data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
 # test_phenopackets has five samples with Four Terms
-test_samples = sumsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
+test_samples = setsim.io.read_folder(os.path.join(test_data, 'test_phenopackets'), hpo)
 
 
 # The table below shows which terms each sample has:

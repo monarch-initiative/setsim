@@ -1,13 +1,13 @@
-import sumsim
-from sumsim.io import read_folder
-from sumsim.sim import IcCalculator, IcTransformer
-from sumsim.matrix import SimilarityMatrix
-from sumsim.matrix import Rank
+import setsim
+from setsim.io import read_folder
+from setsim.sim import IcCalculator, IcTransformer
+from setsim.matrix import SimilarityMatrix
+from setsim.matrix import Rank
 import os
 from hpotk.ontology import MinimalOntology
 from hpotk.ontology.load.obographs import load_minimal_ontology
 import math
-from sumsim.model import Sample
+from setsim.model import Sample
 import random
 from statistics import mean
 
@@ -28,7 +28,7 @@ hpo: MinimalOntology = load_minimal_ontology(fpath_hpo)
 samples = read_folder(fpath_phenopackets, hpo, recursive = True)
 samples = [sample for sample in samples if len(sample.phenotypic_features) > 0]
 
-diseases = sumsim.io.read_hpoa(fpath_hpoa, hpo)
+diseases = setsim.io.read_hpoa(fpath_hpoa, hpo)
 calc = IcCalculator(hpo, multiprocess=True, progress_bar=True)
 ic_dict = calc.calculate_ic_from_diseases(diseases)
 transformer = IcTransformer(hpo, samples=diseases)
