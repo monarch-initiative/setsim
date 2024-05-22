@@ -16,7 +16,8 @@ from ._nulldistribution import GetNullDistribution, KernelIterator, PatientGener
 
 class SimilarityMatrix(KernelIterator, metaclass=abc.ABCMeta):
     def __init__(self, hpo: hpotk.MinimalOntology, patients: Sequence[Sample], n_iter_distribution: int,
-                 num_features_distribution: int, similarity_methods: Sequence[str],
+                 similarity_methods: Sequence[str],
+                 num_features_distribution: int = None,
                  mica_dict: typing.Mapping[TermPair, float] = None,
                  ic_dict: typing.Mapping[hpotk.TermId, float] = None,
                  delta_ic_dict: typing.Mapping[hpotk.TermId, float] = None,
