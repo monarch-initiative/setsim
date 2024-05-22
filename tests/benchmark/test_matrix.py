@@ -73,7 +73,7 @@ class TestBenchmark(unittest.TestCase):
         disease_id = TermId.from_curie("MONDO:1234567")
         disease_features = [TermId.from_curie(term) for term in ["HP:0004026", "HP:0032648"]]
         disease = DiseaseModel(disease_id, "Test_Disease", disease_features, hpo)
-        benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+        benchmark = SimilarityMatrix(hpo, test_samples, 100, num_features_distribution=10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                      delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
                                      similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank",
                                                          "simgci",
@@ -97,7 +97,7 @@ class TestBenchmark(unittest.TestCase):
                         results["MONDO_1234567_simgci_sim"].loc["Bill"])
 
         # Repeat with ic_dict
-        benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, bayes_ic_dict=bayes_ic_dict, delta_ic_dict=delta_ic_dict,
+        benchmark = SimilarityMatrix(hpo, test_samples, 100, num_features_distribution=10, bayes_ic_dict=bayes_ic_dict, delta_ic_dict=delta_ic_dict,
                                      ic_dict=ic_dict,
                                      chunksize=1,
                                      similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank", "simgci"])
@@ -120,7 +120,7 @@ class TestBenchmark(unittest.TestCase):
                         results["MONDO_1234567_simgci_sim"].loc["Bill"])
 
         # Repeat without distribution
-        benchmark = SimilarityMatrix(hpo, test_samples, 0, 10, delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
+        benchmark = SimilarityMatrix(hpo, test_samples, 0, num_features_distribution=10, delta_ic_dict=delta_ic_dict, ic_dict=ic_dict,
                                      chunksize=1, similarity_methods=["simici", "phenomizer", "jaccard"])
         results = benchmark.compute_diagnostic_similarities([disease])
         self.assertTrue(results["MONDO_1234567_simici_sim"].loc["Tom"] >
@@ -129,7 +129,7 @@ class TestBenchmark(unittest.TestCase):
                         results["MONDO_1234567_phenomizer_sim"].loc["Bill"])
 
     def test_patient2patient_similarities(self):
-        benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+        benchmark = SimilarityMatrix(hpo, test_samples, 100, num_features_distribution=10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                      delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
                                      similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank", "simgci"])
         results = benchmark.compute_person2person_similarities(test_samples)
@@ -150,7 +150,7 @@ class TestBenchmark(unittest.TestCase):
         disease_features = [[TermId.from_curie(term) for term in ["HP:0004021", "HP:0004026", "HP:0032648"]],
                             [TermId.from_curie(term) for term in ["HP:0004026"]]]
         diseases = [DiseaseModel(disease_id[i], f"Test_Disease_{i}", disease_features[i], hpo) for i in range(2)]
-        benchmark = SimilarityMatrix(hpo, test_samples, 100, 10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
+        benchmark = SimilarityMatrix(hpo, test_samples, 100, num_features_distribution=10, ic_dict=ic_dict, bayes_ic_dict=bayes_ic_dict,
                                      delta_ic_dict=delta_ic_dict, mica_dict=mica_dict, chunksize=1,
                                      similarity_methods=["simici", "phenomizer", "jaccard", "simgic", "phrank",
                                                          "simgci",
