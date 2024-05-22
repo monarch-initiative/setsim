@@ -39,7 +39,7 @@ test = ["pytest>=7.0.0, <=9.0.0"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-zip-safe = false
+packages = ["setsim", "sumsim"]
 
 [tool.setuptools.dynamic]
 version = { attr = "sumsim.__version__" }
