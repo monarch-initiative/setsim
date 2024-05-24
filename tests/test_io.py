@@ -1,15 +1,17 @@
 import os
 import unittest
-
-from pkg_resources import resource_filename
+import importlib.resources as pkg_resources
 
 import hpotk
 
 import setsim
 
-data_dir = resource_filename(__name__, 'data')
-hpo = hpotk.load_minimal_ontology(os.path.join(data_dir, 'hp.toy.json'))
+def get_data_dir(package, resource):
+    return pkg_resources.files(package).joinpath(resource)
 
+# Use the function to get the path to the data directory
+data_dir = get_data_dir(__name__, 'data/hp.toy.json')
+hpo = hpotk.load_minimal_ontology(data_dir)
 
 class TestIo(unittest.TestCase):
 
