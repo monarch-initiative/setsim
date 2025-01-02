@@ -35,11 +35,11 @@ dependencies = [
 test = ["pytest>=7.0.0, <=9.0.0"]
 
 [project.urls]
-"Repository" = "https://github.com/monarch-initiative/sumsim"
+"Repository" = "https://github.com/monarch-initiative/setsim"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 zip-safe = false
 
 [tool.setuptools.dynamic]
-version = { attr = "sumsim.__version__" }
+version = { attr = "setsim.__version__" }
