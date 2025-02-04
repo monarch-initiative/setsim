@@ -1,8 +1,8 @@
 import os
 import unittest
 from math import log
+import importlib.resources as importlib_resources
 
-from pkg_resources import resource_filename
 
 import hpotk
 from hpotk import MinimalOntology
@@ -12,7 +12,7 @@ import setsim
 from setsim.sim import IcCalculator, IcTransformer
 from setsim.sim.phenomizer import TermPair
 
-test_data = resource_filename(__name__, '../data')
+test_data = str(importlib_resources.files(__name__) / 'data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 
