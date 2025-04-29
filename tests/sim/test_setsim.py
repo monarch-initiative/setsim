@@ -1,8 +1,7 @@
 import os
 import unittest
 from math import log
-
-from pkg_resources import resource_filename
+import importlib.resources as importlib_resources
 
 import hpotk
 from hpotk import MinimalOntology
@@ -20,7 +19,7 @@ from setsim.sim._simgci import SimGciSimilarityKernel, SimGciSimilaritiesKernel
 from setsim.sim._simgic import SimGicSimilarityKernel, SimGicSimilaritiesKernel
 from setsim.sim._simici import SimIciSimilaritiesKernel
 
-test_data = resource_filename(__name__, '../data')
+test_data = str(importlib_resources.files(__name__) / 'data')
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 

@@ -2,7 +2,8 @@ import os
 import typing
 import unittest
 
-from pkg_resources import resource_filename
+import importlib.resources as importlib_resources
+
 
 import hpotk
 
@@ -12,7 +13,7 @@ from ._algo import TermPair, PhenomizerSimilarityKernel, PrecomputedIcMicaSimila
     PhenomizerSimilaritiesKernel
 from ...model._base import FastPhenotyped
 
-test_data = resource_filename(__name__, '../../../../tests/data')
+test_data = str(importlib_resources.files(__name__).joinpath('../../../../tests/data').resolve())
 fpath_hpo = os.path.join(test_data, 'hp.toy.json')
 hpo: hpotk.MinimalOntology = hpotk.load_minimal_ontology(fpath_hpo)
 

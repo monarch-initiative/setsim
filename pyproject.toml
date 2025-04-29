@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "setsim"
-description = "A proof of concept of the summing similarity measure"
+description = "Summing similarity measure for the Human Phenotype Ontology"
 authors = [
     { name = "Ben Coleman", email = "ben.coleman@jax.org" },
     { name = "Daniel Danis", email = "daniel.gordon.danis@protonmail.com" },
@@ -28,7 +28,7 @@ dynamic = ["version"]
 dependencies = [
     "hpo-toolkit >= 0.3.0",
     "phenopackets >= 2.0.2, <3.0.0",
-    "pandas >= 1.3.0",
+    "pandas >= 2.2.3",
     "tqdm >= 4.62.0"
 ]
 [project.optional-dependencies]

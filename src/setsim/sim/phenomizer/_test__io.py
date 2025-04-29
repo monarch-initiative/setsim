@@ -1,14 +1,13 @@
 import unittest
-
-from pkg_resources import resource_filename
-
+import importlib.resources as importlib_resources
 from ._io import TermPair, read_ic_mica_data
 
 
 class TestPhenomizerIO(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.fpath = resource_filename(__name__, 'test_data/tps.csv.gz')
+        self.fpath = str(importlib_resources.files(__name__) / 'test_data/tps.csv.gz')
+
 
     def test_read_ic_mica_data(self):
         mica = read_ic_mica_data(self.fpath)

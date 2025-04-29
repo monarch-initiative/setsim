@@ -1,13 +1,13 @@
 import os
 import unittest
-
-from pkg_resources import resource_filename
+import importlib.resources as importlib_resources
 
 import hpotk
 
 import setsim
 
-data_dir = resource_filename(__name__, 'data')
+data_dir = str(importlib_resources.files(__name__) / 'data')
+
 hpo = hpotk.load_minimal_ontology(os.path.join(data_dir, 'hp.toy.json'))
 
 
