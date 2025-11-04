@@ -4,9 +4,11 @@ import typing
 import numpy as np
 import hpotk
 
-from sumsim.model import Phenotyped
+from typing import Mapping
 
-from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult
+from setsim.model import Phenotyped
+
+from .._base import SimilarityKernel, SimilarityMeasure, SimilarityResult, SimilarityMeasureResult, SimilaritiesKernel
 from ._io import TermPair
 
 
@@ -134,3 +136,36 @@ class PhenomizerSimilarityKernel(BasePhenomizerSimilarityKernel):
         max_b = np.max(similarities, axis=0)
         mean_b = max_b.mean()
         return SimilarityResult((mean_a + mean_b) * .5)
+
+
+class PhenomizerSimilaritiesKernel(SimilaritiesKernel, metaclass=abc.ABCMeta):
+    def __init__(self, disease: Phenotyped,
+                 mica_dict: typing.Union[Mapping[TermPair, float], Mapping[typing.Tuple[int, int], float]],
+                 use_fragile_mica_dict: bool = False,
+                 return_last_result: bool = False):
+        SimilaritiesKernel.__init__(self, disease)
+        self._mica_dict = mica_dict
+        self._use_fragile_mica_dict = use_fragile_mica_dict
+
+    @staticmethod
+    def _sample_iterator(sample: Phenotyped) -> typing.Iterable[hpotk.TermId]:
+        for term in sample.phenotypic_features:
+            yield term
+
+    def _term_similarity(self, a: hpotk.TermId) -> float:
+        a_as_int = int(a.id)
+        if self._use_fragile_mica_dict:
+            return max(self._mica_dict.get((int(pf.id), a_as_int), 0) for pf in self._disease.phenotypic_features)
+        return max(self._mica_dict.get(TermPair(int(pf.id), a_as_int), 0) for pf in self._disease.phenotypic_features)
+
+    def compute(self, sample: Phenotyped, return_last_result: bool = False) -> typing.Union[typing.Sequence[float], float]:
+        sim = 0.0
+        i = 0
+        results = []
+        for next_term in self._sample_iterator(sample):
+            sim = (self._term_similarity(next_term) + sim * i) / (i + 1)
+            i += 1
+            results.append(sim)
+        if return_last_result:
+            return sim
+        return results

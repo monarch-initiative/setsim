@@ -1,0 +1,26 @@
+{
+  "id": "Matt",
+  "subject": {
+    "id": "Matt",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0004021",
+        "label": "Lytic defects of radial metaphysis"
+      }
+    }
+  ],
+    "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:2345678"
+        }
+      }
+    }
+  ]
+}

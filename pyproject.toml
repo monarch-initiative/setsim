@@ -3,7 +3,7 @@ requires = ["setuptools>=65.6.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sumsim"
+name = "setsim"
 description = "A proof of concept of the summing similarity measure"
 authors = [
     { name = "Ben Coleman", email = "ben.coleman@jax.org" },
@@ -26,18 +26,20 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-    "hpo-toolkit >= 0.3.0"
+    "hpo-toolkit >= 0.3.0",
+    "phenopackets >= 2.0.2, <3.0.0",
+    "pandas >= 1.3.0",
+    "tqdm >= 4.62.0"
 ]
 [project.optional-dependencies]
-dev = [
-]
+test = ["pytest>=7.0.0, <=9.0.0"]
 
 [project.urls]
-"Repository" = "https://github.com/monarch-initiative/sumsim"
+"Repository" = "https://github.com/monarch-initiative/setsim"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 zip-safe = false
 
 [tool.setuptools.dynamic]
-version = { attr = "sumsim.__version__" }
+version = { attr = "setsim.__version__" }

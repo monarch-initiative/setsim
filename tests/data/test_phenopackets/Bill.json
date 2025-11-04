@@ -1,0 +1,26 @@
+{
+  "id": "Bill",
+  "subject": {
+    "id": "Bill",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0004026",
+        "label": "Broad radial metaphysis"
+      }
+    }
+  ],
+  "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:1234567"
+        }
+      }
+    }
+  ]
+}

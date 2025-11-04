@@ -1,0 +1,26 @@
+{
+  "id": "Kayla",
+  "subject": {
+    "id": "Kayla",
+    "sex": "MALE"
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0003981",
+        "label": "Broad radius"
+      }
+    }
+  ],
+    "interpretations": [
+    {
+      "id": "patient",
+      "progressStatus": "SOLVED",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:3456789"
+        }
+      }
+    }
+  ]
+}
